@@ -4,6 +4,7 @@ Add-Type -AssemblyName System.Drawing
 # ============================================================
 # Putter 0.6
 # A lightweight multi-session editor for PuTTY on Windows.
+# Find it on https://github.com/Witaminer/putter
 # ============================================================
 
 Add-Type -TypeDefinition @'

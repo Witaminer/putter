@@ -8,7 +8,7 @@ It reads PuTTY sessions directly from:
 
 ## Current version
 
-**0.8**
+**0.9**
 
 ## Features
 
@@ -46,7 +46,7 @@ No compilation or installer is required.
 
 ## Safety
 
-Putter edits the current user's PuTTY session registry keys directly. Before every modifying operation it exports the complete PuTTY Sessions branch to the local `Backups` directory.
+Putter edits the current user's PuTTY session registry keys directly. Automatic full `.reg` backups are enabled by default before modifying operations; the backup location and automatic-backup behavior can be changed in **Options -> Settings...**.
 
 ## License
 
@@ -67,3 +67,10 @@ While editing a cell, `Home` and `End` move the caret to the beginning or end of
 - **Export selected sessions...** is also available from the grid context menu.
 
 The per-user configuration is stored in Putter.config.json next to the script and is intentionally ignored by Git.
+
+
+## Version 0.9
+
+- Press **Delete** in the session grid to delete the selected session or sessions. The normal Delete key behavior is preserved while editing text inside a cell.
+- **Copy session...** in the right-click context menu duplicates one selected PuTTY session and asks for the new session name.
+- Putter can remember the main window position and size between runs. This is controlled by **Options -> Settings...** and is stored in the local `Putter.config.json` file.

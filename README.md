@@ -56,6 +56,17 @@ Putter 0.18 has been tested with Windows PowerShell 5.1 and PowerShell 7.6.6 on 
 
 No compilation or installer is required.
 
+## Compatibility
+
+Putter requires Windows PowerShell 5.1 or a compatible PowerShell 7.x installation.
+
+- **Windows 10 and Windows 11:** Windows PowerShell 5.1 is included with the operating system, so Putter can run without installing a newer PowerShell.
+- **Windows 7 SP1:** Putter can use Windows PowerShell 5.1 after installing Windows Management Framework (WMF) 5.1 and its required .NET Framework prerequisites.
+- **Windows Server 2016 and newer:** Windows PowerShell 5.1 is included with the operating system.
+- **Windows Server 2008 R2 SP1, 2012, and 2012 R2:** Windows PowerShell 5.1 can be provided by installing WMF 5.1 and its prerequisites.
+
+Windows 7 and the older Windows Server versions above are compatibility targets based on their ability to run Windows PowerShell 5.1; they have not yet been tested with Putter. The currently tested environments are Windows PowerShell 5.1 and PowerShell 7.6.6 on Windows.
+
 ## Safety
 
 Putter edits the current user's PuTTY session registry keys directly. Automatic full `.reg` backups are enabled by default before modifying operations; the backup location and automatic-backup behavior can be changed in **Options -> Settings...**.

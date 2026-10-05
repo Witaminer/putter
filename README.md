@@ -87,6 +87,24 @@ Windows 7 and the older Windows Server versions above are compatibility targets 
 
 Putter edits the current user's PuTTY session registry keys directly. Automatic full `.reg` backups are enabled by default before modifying operations; the backup location and automatic-backup behavior can be changed in **Options -> Settings...**.
 
+## Security and privacy
+
+Putter is designed as a local Windows utility. It does not upload, synchronize, or transmit PuTTY session data, configuration, registry contents, backup files, credentials, or usage information to any Putter-operated server or cloud service.
+
+Putter has no telemetry, analytics, account system, background service, or remote database. Its own configuration and automatic backups are stored locally on the computer.
+
+Network activity can still occur as a direct result of user actions. For example, Putter can launch PuTTY sessions configured by the user, and clicking the repository link in **Help -> About Putter...** opens GitHub in the default browser. Those actions are explicit and are not background data collection by Putter.
+
+The complete PowerShell source is available in this repository so the program's behavior can be inspected directly.
+
+## Disclaimer
+
+Putter modifies PuTTY session data in the Windows Registry. Features such as rename, multi-edit, import, and delete can therefore make real changes to saved sessions.
+
+Automatic backups are intended to reduce the risk of accidental changes, but they are not a substitute for reviewing what you are about to modify and maintaining your own backups where appropriate.
+
+Putter is provided without warranty, as described by the GNU General Public License v3.0. The authors and contributors are not responsible for data loss, misconfiguration, interrupted access, or other damage resulting from use or misuse of the software. You are responsible for the changes you choose to apply.
+
 ## License
 
 GNU General Public License v3.0.

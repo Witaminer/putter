@@ -2,7 +2,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 # ============================================================
-# Putter 0.11
+# Putter 0.12
 # A lightweight multi-session editor for PuTTY on Windows.
 # Find it on https://github.com/Witaminer/putter
 # ============================================================
@@ -97,9 +97,30 @@ public class PutterDataGridView : DataGridView
         return base.ProcessCmdKey(ref msg, keyData);
     }
 }
+
+public class PutterDarkColorTable : ProfessionalColorTable
+{
+    private readonly System.Drawing.Color back = System.Drawing.Color.FromArgb(32, 32, 32);
+    private readonly System.Drawing.Color hover = System.Drawing.Color.FromArgb(62, 62, 66);
+    private readonly System.Drawing.Color border = System.Drawing.Color.FromArgb(85, 85, 90);
+
+    public override System.Drawing.Color ToolStripDropDownBackground { get { return back; } }
+    public override System.Drawing.Color ImageMarginGradientBegin { get { return back; } }
+    public override System.Drawing.Color ImageMarginGradientMiddle { get { return back; } }
+    public override System.Drawing.Color ImageMarginGradientEnd { get { return back; } }
+    public override System.Drawing.Color MenuItemSelected { get { return hover; } }
+    public override System.Drawing.Color MenuItemBorder { get { return border; } }
+    public override System.Drawing.Color MenuItemSelectedGradientBegin { get { return hover; } }
+    public override System.Drawing.Color MenuItemSelectedGradientEnd { get { return hover; } }
+    public override System.Drawing.Color MenuItemPressedGradientBegin { get { return hover; } }
+    public override System.Drawing.Color MenuItemPressedGradientMiddle { get { return hover; } }
+    public override System.Drawing.Color MenuItemPressedGradientEnd { get { return hover; } }
+    public override System.Drawing.Color SeparatorDark { get { return border; } }
+    public override System.Drawing.Color SeparatorLight { get { return border; } }
+}
 '@ -ReferencedAssemblies 'System.Windows.Forms', 'System.Drawing' -WarningAction SilentlyContinue
 
-$PutterVersion   = '0.11'
+$PutterVersion   = '0.12'
 $PutterBuildDate = '2026.10.05'
 $RepositoryUrl   = 'https://github.com/Witaminer/putter'
 
@@ -118,6 +139,8 @@ $Config = [PSCustomObject]@{
     WindowHeight           = $null
     WindowState            = 'Normal'
     NightMode              = $false
+    GridFontSize           = 9
+    GridFontBold           = $false
     PuttyLauncher          = ''
     LaunchDelayMilliseconds = 1000
 }
@@ -150,6 +173,14 @@ if (Test-Path -LiteralPath $ConfigPath) {
 
         if ($null -ne $loadedConfig.NightMode) {
             $Config.NightMode = [bool]$loadedConfig.NightMode
+        }
+
+        if ($null -ne $loadedConfig.GridFontSize) {
+            $Config.GridFontSize = [Math]::Min(24, [Math]::Max(7, [int]$loadedConfig.GridFontSize))
+        }
+
+        if ($null -ne $loadedConfig.GridFontBold) {
+            $Config.GridFontBold = [bool]$loadedConfig.GridFontBold
         }
 
         if ($null -ne $loadedConfig.PuttyLauncher) {
@@ -395,6 +426,32 @@ function Apply-PutterTheme {
     }
 }
 
+function Apply-PutterGridFont {
+    $style = if ($Config.GridFontBold) {
+        [System.Drawing.FontStyle]::Bold
+    }
+    else {
+        [System.Drawing.FontStyle]::Regular
+    }
+
+    $font = New-Object System.Drawing.Font(
+        $grid.Font.FontFamily,
+        [single]$Config.GridFontSize,
+        $style
+    )
+
+    $grid.Font = $font
+    $grid.DefaultCellStyle.Font = $font
+    $grid.ColumnHeadersDefaultCellStyle.Font = $font
+
+    $rowHeight = [Math]::Max(22, $font.Height + 7)
+    $grid.RowTemplate.Height = $rowHeight
+
+    foreach ($row in $grid.Rows) {
+        $row.Height = $rowHeight
+    }
+}
+
 function Apply-PutterMainTheme {
     $theme = Get-PutterTheme
 
@@ -407,6 +464,18 @@ function Apply-PutterMainTheme {
     $contextMenu.BackColor = $theme.BackColor
     $contextMenu.ForeColor = $theme.ForeColor
     Apply-PutterThemeToToolStripItems -Items $contextMenu.Items -Theme $theme
+
+    if ($Config.NightMode) {
+        $darkRenderer = New-Object System.Windows.Forms.ToolStripProfessionalRenderer (New-Object PutterDarkColorTable)
+        $menuStrip.Renderer = $darkRenderer
+        $contextMenu.Renderer = $darkRenderer
+    }
+    else {
+        $menuStrip.RenderMode = [System.Windows.Forms.ToolStripRenderMode]::System
+        $contextMenu.RenderMode = [System.Windows.Forms.ToolStripRenderMode]::System
+    }
+
+    Apply-PutterGridFont
 }
 
 # ============================================================
@@ -440,6 +509,7 @@ $grid.Anchor = 'Top,Bottom,Left,Right'
 $grid.AllowUserToAddRows = $false
 $grid.AllowUserToDeleteRows = $false
 $grid.AllowUserToOrderColumns = $true
+$grid.AllowUserToResizeRows = $false
 $grid.SelectionMode = 'FullRowSelect'
 $grid.MultiSelect = $true
 $grid.AutoSizeColumnsMode = 'Fill'
@@ -471,6 +541,16 @@ $portColumn.DataType = [int]
 
 $view = New-Object System.Data.DataView($table)
 $grid.DataSource = $view
+
+$startColumn = New-Object System.Windows.Forms.DataGridViewButtonColumn
+$startColumn.Name = 'Start'
+$startColumn.HeaderText = ''
+$startColumn.Text = '▶'
+$startColumn.UseColumnTextForButtonValue = $true
+$startColumn.Width = 34
+$startColumn.MinimumWidth = 34
+$startColumn.AutoSizeMode = [System.Windows.Forms.DataGridViewAutoSizeColumnMode]::None
+[void]$grid.Columns.Insert(0, $startColumn)
 
 function Update-Status {
     $statusLabel.Text = "Sessions: $($table.Rows.Count)    Selected: $($grid.SelectedRows.Count)"
@@ -535,6 +615,16 @@ $filterBox.Add_TextChanged({
     }
 })
 
+$grid.Add_CellContentClick({
+    param($sender, $e)
+
+    if ($e.RowIndex -ge 0 -and
+        $e.ColumnIndex -ge 0 -and
+        $grid.Columns[$e.ColumnIndex].Name -eq 'Start') {
+        Start-PutterSessionRows -Rows @($grid.Rows[$e.RowIndex])
+    }
+})
+
 $grid.Add_SelectionChanged({
     Update-Status
 })
@@ -554,7 +644,7 @@ $grid.Add_CellDoubleClick({
 
     $columnName = $grid.Columns[$e.ColumnIndex].Name
 
-    if ($columnName -eq 'RegistryName') {
+    if ($columnName -eq 'RegistryName' -or $columnName -eq 'Start') {
         return
     }
 
@@ -1147,8 +1237,10 @@ function Show-MultiEditDialog {
     [void]$dlg.ShowDialog($form)
 }
 
-function Start-PutterSessions {
-    $selectedRows = @($grid.SelectedRows | Sort-Object Index)
+function Start-PutterSessionRows {
+    param([System.Windows.Forms.DataGridViewRow[]]$Rows)
+
+    $selectedRows = @($Rows | Sort-Object Index)
 
     if ($selectedRows.Count -eq 0) {
         return
@@ -1191,6 +1283,10 @@ function Start-PutterSessions {
     }
 
     $statusLabel.Text = "Started sessions: $launched"
+}
+
+function Start-PutterSessions {
+    Start-PutterSessionRows -Rows @($grid.SelectedRows)
 }
 
 # ============================================================
@@ -1367,7 +1463,7 @@ function Show-OptionsDialog {
     $dlg = New-Object System.Windows.Forms.Form
     $dlg.Text = 'Putter - Options'
     $dlg.Width = 650
-    $dlg.Height = 430
+    $dlg.Height = 500
     $dlg.StartPosition = 'CenterParent'
     $dlg.FormBorderStyle = 'FixedDialog'
     $dlg.MaximizeBox = $false
@@ -1419,15 +1515,36 @@ function Show-OptionsDialog {
     $nightModeCheck.Width = 300
     $nightModeCheck.Checked = [bool]$Config.NightMode
 
+    $fontSizeLabel = New-Object System.Windows.Forms.Label
+    $fontSizeLabel.Text = 'Grid font size:'
+    $fontSizeLabel.Left = 15
+    $fontSizeLabel.Top = 218
+    $fontSizeLabel.AutoSize = $true
+
+    $fontSizeBox = New-Object System.Windows.Forms.NumericUpDown
+    $fontSizeBox.Left = 110
+    $fontSizeBox.Top = 214
+    $fontSizeBox.Width = 70
+    $fontSizeBox.Minimum = 7
+    $fontSizeBox.Maximum = 24
+    $fontSizeBox.Value = [decimal]$Config.GridFontSize
+
+    $fontBoldCheck = New-Object System.Windows.Forms.CheckBox
+    $fontBoldCheck.Text = 'Bold'
+    $fontBoldCheck.Left = 205
+    $fontBoldCheck.Top = 216
+    $fontBoldCheck.Width = 80
+    $fontBoldCheck.Checked = [bool]$Config.GridFontBold
+
     $launcherLabel = New-Object System.Windows.Forms.Label
     $launcherLabel.Text = 'PuTTY launcher:'
     $launcherLabel.Left = 15
-    $launcherLabel.Top = 225
+    $launcherLabel.Top = 260
     $launcherLabel.AutoSize = $true
 
     $launcherBox = New-Object System.Windows.Forms.TextBox
     $launcherBox.Left = 15
-    $launcherBox.Top = 245
+    $launcherBox.Top = 280
     $launcherBox.Width = 500
     $launcherBox.Text = [string]$Config.PuttyLauncher
     $launcherBox.ShortcutsEnabled = $true
@@ -1435,18 +1552,18 @@ function Show-OptionsDialog {
     $launcherBrowseButton = New-Object System.Windows.Forms.Button
     $launcherBrowseButton.Text = 'Browse...'
     $launcherBrowseButton.Left = 525
-    $launcherBrowseButton.Top = 243
+    $launcherBrowseButton.Top = 278
     $launcherBrowseButton.Width = 90
 
     $delayLabel = New-Object System.Windows.Forms.Label
     $delayLabel.Text = 'Delay between sessions (seconds):'
     $delayLabel.Left = 15
-    $delayLabel.Top = 285
+    $delayLabel.Top = 320
     $delayLabel.AutoSize = $true
 
     $delayBox = New-Object System.Windows.Forms.NumericUpDown
     $delayBox.Left = 220
-    $delayBox.Top = 282
+    $delayBox.Top = 317
     $delayBox.Width = 90
     $delayBox.DecimalPlaces = 1
     $delayBox.Increment = [decimal]0.1
@@ -1457,13 +1574,13 @@ function Show-OptionsDialog {
     $okButton = New-Object System.Windows.Forms.Button
     $okButton.Text = 'OK'
     $okButton.Left = 430
-    $okButton.Top = 340
+    $okButton.Top = 390
     $okButton.Width = 85
 
     $cancelButton = New-Object System.Windows.Forms.Button
     $cancelButton.Text = 'Cancel'
     $cancelButton.Left = 525
-    $cancelButton.Top = 340
+    $cancelButton.Top = 390
     $cancelButton.Width = 90
 
     $backupCheck.Add_CheckedChanged({
@@ -1536,6 +1653,8 @@ function Show-OptionsDialog {
         $Config.BackupDirectory = $folderBox.Text
         $Config.RememberWindowGeometry = $rememberWindowCheck.Checked
         $Config.NightMode = $nightModeCheck.Checked
+        $Config.GridFontSize = [int]$fontSizeBox.Value
+        $Config.GridFontBold = $fontBoldCheck.Checked
         $Config.PuttyLauncher = $launcherBox.Text.Trim()
         $Config.LaunchDelayMilliseconds = [int]([decimal]$delayBox.Value * 1000)
         Save-PutterConfig
@@ -1557,6 +1676,9 @@ function Show-OptionsDialog {
     $dlg.Controls.Add($openButton)
     $dlg.Controls.Add($rememberWindowCheck)
     $dlg.Controls.Add($nightModeCheck)
+    $dlg.Controls.Add($fontSizeLabel)
+    $dlg.Controls.Add($fontSizeBox)
+    $dlg.Controls.Add($fontBoldCheck)
     $dlg.Controls.Add($launcherLabel)
     $dlg.Controls.Add($launcherBox)
     $dlg.Controls.Add($launcherBrowseButton)

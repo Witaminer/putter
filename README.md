@@ -8,7 +8,7 @@ It reads PuTTY sessions directly from:
 
 ## Current version
 
-**0.15**
+**0.16**
 
 ## Features
 
@@ -114,3 +114,11 @@ The per-user configuration is stored in Putter.config.json next to the script an
 ## Version 0.15
 
 - Fixed another DataGridView Fill-mode timing issue when restoring column proportions. Saved FillWeight values are now applied only after the form is shown and the grid has completed its initial layout, preventing the first WinForms Fill calculation from overwriting the restored proportions.
+
+
+## Version 0.16
+
+- Replaced the compact > session launcher with a standard WinForms **Open** button.
+- Added a custom Putter application icon based on the mirrored-t monogram.
+- The ICO is embedded directly in Putter.ps1 as Base64, so no additional icon file is required.
+- The embedded icon contains 16x16, 32x32, and 48x48 sizes and keeps the PowerShell source ASCII-safe.

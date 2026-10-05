@@ -38,7 +38,7 @@ To run Putter from source with automatic PowerShell selection, use:
 Putter.bat
 ```
 
-`Putter.bat` prefers PowerShell 7.x when `pwsh.exe` is available and falls back to Windows PowerShell 5.x.
+`Putter.bat` prefers PowerShell 7.x when `pwsh.exe` is available and falls back to Windows PowerShell 5.1.
 
 To choose the PowerShell generation explicitly, use:
 
@@ -65,8 +65,8 @@ Putter is intentionally available in both source and ready-to-run forms.
 **Ready-to-run Windows executable:** [Download the latest release](https://github.com/Witaminer/putter/releases/latest)
 
 - `Putter.ps1` is the complete source. It remains available so the program is transparent, inspectable, editable, and easy to audit.
-- `Putter.bat` is the automatic launcher. It prefers PowerShell 7.x when `pwsh.exe` is available and falls back to Windows PowerShell 5.x.
-- `Putter5.bat` explicitly runs the source with Windows PowerShell 5.x.
+- `Putter.bat` is the automatic launcher. It prefers PowerShell 7.x when `pwsh.exe` is available and falls back to Windows PowerShell 5.1.
+- `Putter5.bat` explicitly runs the source with Windows PowerShell 5.1.
 - `Putter7.bat` explicitly runs the source with PowerShell 7.x.
 - `Putter.exe` is the ready-to-run build generated from the same `Putter.ps1` source with PS2EXE.
 

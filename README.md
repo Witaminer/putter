@@ -51,3 +51,7 @@ Putter edits the current user's PuTTY session registry keys directly. Before eve
 ## License
 
 GNU General Public License v3.0.
+
+### Keyboard behavior
+
+While editing a cell, `Home` and `End` move the caret to the beginning or end of the field instead of being handled as DataGridView navigation commands.

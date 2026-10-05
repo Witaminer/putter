@@ -60,6 +60,8 @@ No compilation or installer is required for the script version.
 
 Putter is intentionally available in both source and ready-to-run forms.
 
+**Ready-to-run Windows executable:** [Download the latest release](https://github.com/Witaminer/putter/releases/latest)
+
 - `Putter.ps1` is the complete source. It remains available so the program is transparent, inspectable, editable, and easy to audit.
 - `Putter.bat` is the automatic launcher. It prefers PowerShell 7.x when `pwsh.exe` is available and falls back to Windows PowerShell 5.x.
 - `Putter5.bat` explicitly runs the source with Windows PowerShell 5.x.

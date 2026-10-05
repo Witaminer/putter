@@ -2,7 +2,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 # ============================================================
-# Putter 0.9
+# Putter 0.10
 # A lightweight multi-session editor for PuTTY on Windows.
 # Find it on https://github.com/Witaminer/putter
 # ============================================================
@@ -82,7 +82,7 @@ public class PutterDataGridView : DataGridView
 }
 '@ -ReferencedAssemblies 'System.Windows.Forms', 'System.Drawing' -WarningAction SilentlyContinue
 
-$PutterVersion   = '0.9'
+$PutterVersion   = '0.10'
 $PutterBuildDate = '2026.10.05'
 $RepositoryUrl   = 'https://github.com/Witaminer/putter'
 
@@ -99,6 +99,7 @@ $Config = [PSCustomObject]@{
     WindowY                = $null
     WindowWidth            = $null
     WindowHeight           = $null
+    WindowState            = 'Normal'
 }
 
 if (Test-Path -LiteralPath $ConfigPath) {
@@ -121,6 +122,10 @@ if (Test-Path -LiteralPath $ConfigPath) {
             if ($null -ne $loadedConfig.$propertyName) {
                 $Config.$propertyName = [int]$loadedConfig.$propertyName
             }
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace([string]$loadedConfig.WindowState)) {
+            $Config.WindowState = [string]$loadedConfig.WindowState
         }
     }
     catch {
@@ -235,6 +240,10 @@ function Restore-PutterWindowGeometry {
     if ($isVisible) {
         $Form.StartPosition = 'Manual'
         $Form.SetBounds($bounds.X, $bounds.Y, $bounds.Width, $bounds.Height)
+
+        if ($Config.WindowState -eq 'Maximized') {
+            $Form.WindowState = [System.Windows.Forms.FormWindowState]::Maximized
+        }
     }
 }
 
@@ -256,6 +265,12 @@ function Save-PutterWindowGeometry {
     $Config.WindowY = $bounds.Y
     $Config.WindowWidth = $bounds.Width
     $Config.WindowHeight = $bounds.Height
+    $Config.WindowState = if ($Form.WindowState -eq [System.Windows.Forms.FormWindowState]::Maximized) {
+        'Maximized'
+    }
+    else {
+        'Normal'
+    }
 
     Save-PutterConfig
 }
@@ -269,7 +284,6 @@ $form.Text = "Putter $PutterVersion"
 $form.Width = 1250
 $form.Height = 750
 $form.StartPosition = 'CenterScreen'
-Restore-PutterWindowGeometry -Form $form
 
 $filterLabel = New-Object System.Windows.Forms.Label
 $filterLabel.Text = 'Filter:'
@@ -1572,6 +1586,9 @@ $form.Controls.Add($filterLabel)
 $form.Controls.Add($filterBox)
 $form.Controls.Add($grid)
 $form.Controls.Add($statusLabel)
+
+# Restore only after anchored controls exist, so they resize with the form immediately.
+Restore-PutterWindowGeometry -Form $form
 
 $form.Add_FormClosing({
     Save-PutterWindowGeometry -Form $form

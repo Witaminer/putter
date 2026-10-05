@@ -2,7 +2,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 # ============================================================
-# Putter 0.8
+# Putter 0.9
 # A lightweight multi-session editor for PuTTY on Windows.
 # Find it on https://github.com/Witaminer/putter
 # ============================================================
@@ -82,7 +82,7 @@ public class PutterDataGridView : DataGridView
 }
 '@ -ReferencedAssemblies 'System.Windows.Forms', 'System.Drawing' -WarningAction SilentlyContinue
 
-$PutterVersion   = '0.8'
+$PutterVersion   = '0.9'
 $PutterBuildDate = '2026.10.05'
 $RepositoryUrl   = 'https://github.com/Witaminer/putter'
 
@@ -92,8 +92,13 @@ $ConfigPath       = Join-Path $PSScriptRoot 'Putter.config.json'
 $DefaultBackupDir = Join-Path $PSScriptRoot 'Backups'
 
 $Config = [PSCustomObject]@{
-    CreateBackups   = $true
-    BackupDirectory = $DefaultBackupDir
+    CreateBackups          = $true
+    BackupDirectory        = $DefaultBackupDir
+    RememberWindowGeometry = $true
+    WindowX                = $null
+    WindowY                = $null
+    WindowWidth            = $null
+    WindowHeight           = $null
 }
 
 if (Test-Path -LiteralPath $ConfigPath) {
@@ -106,6 +111,16 @@ if (Test-Path -LiteralPath $ConfigPath) {
 
         if (-not [string]::IsNullOrWhiteSpace([string]$loadedConfig.BackupDirectory)) {
             $Config.BackupDirectory = [string]$loadedConfig.BackupDirectory
+        }
+
+        if ($null -ne $loadedConfig.RememberWindowGeometry) {
+            $Config.RememberWindowGeometry = [bool]$loadedConfig.RememberWindowGeometry
+        }
+
+        foreach ($propertyName in @('WindowX', 'WindowY', 'WindowWidth', 'WindowHeight')) {
+            if ($null -ne $loadedConfig.$propertyName) {
+                $Config.$propertyName = [int]$loadedConfig.$propertyName
+            }
         }
     }
     catch {
@@ -185,6 +200,66 @@ function Show-PutterError {
     ) | Out-Null
 }
 
+function Restore-PutterWindowGeometry {
+    param([System.Windows.Forms.Form]$Form)
+
+    if (-not $Config.RememberWindowGeometry) {
+        return
+    }
+
+    if ($null -eq $Config.WindowX -or
+        $null -eq $Config.WindowY -or
+        $null -eq $Config.WindowWidth -or
+        $null -eq $Config.WindowHeight) {
+        return
+    }
+
+    $width = [Math]::Max(700, [int]$Config.WindowWidth)
+    $height = [Math]::Max(450, [int]$Config.WindowHeight)
+    $bounds = New-Object System.Drawing.Rectangle(
+        [int]$Config.WindowX,
+        [int]$Config.WindowY,
+        $width,
+        $height
+    )
+
+    $isVisible = $false
+
+    foreach ($screen in [System.Windows.Forms.Screen]::AllScreens) {
+        if ($screen.WorkingArea.IntersectsWith($bounds)) {
+            $isVisible = $true
+            break
+        }
+    }
+
+    if ($isVisible) {
+        $Form.StartPosition = 'Manual'
+        $Form.SetBounds($bounds.X, $bounds.Y, $bounds.Width, $bounds.Height)
+    }
+}
+
+function Save-PutterWindowGeometry {
+    param([System.Windows.Forms.Form]$Form)
+
+    if (-not $Config.RememberWindowGeometry) {
+        return
+    }
+
+    $bounds = if ($Form.WindowState -eq [System.Windows.Forms.FormWindowState]::Normal) {
+        $Form.Bounds
+    }
+    else {
+        $Form.RestoreBounds
+    }
+
+    $Config.WindowX = $bounds.X
+    $Config.WindowY = $bounds.Y
+    $Config.WindowWidth = $bounds.Width
+    $Config.WindowHeight = $bounds.Height
+
+    Save-PutterConfig
+}
+
 # ============================================================
 # Main window
 # ============================================================
@@ -194,6 +269,7 @@ $form.Text = "Putter $PutterVersion"
 $form.Width = 1250
 $form.Height = 750
 $form.StartPosition = 'CenterScreen'
+Restore-PutterWindowGeometry -Form $form
 
 $filterLabel = New-Object System.Windows.Forms.Label
 $filterLabel.Text = 'Filter:'
@@ -471,6 +547,110 @@ function Remove-PutterSessions {
     catch {
         Show-PutterError $_.Exception.Message 'Putter - Delete failed'
     }
+}
+
+function Copy-PutterSession {
+    param([System.Windows.Forms.DataGridViewRow]$Row)
+
+    if ($null -eq $Row) {
+        return
+    }
+
+    $sourceHumanName = [string]$Row.Cells['Session'].Value
+    $sourceRegistryName = [string]$Row.Cells['RegistryName'].Value
+    $sourceRegistryPath = Join-Path $SessionsPathPS $sourceRegistryName
+
+    $dlg = New-Object System.Windows.Forms.Form
+    $dlg.Text = 'Putter - Copy session'
+    $dlg.Width = 520
+    $dlg.Height = 180
+    $dlg.StartPosition = 'CenterParent'
+    $dlg.FormBorderStyle = 'FixedDialog'
+    $dlg.MaximizeBox = $false
+    $dlg.MinimizeBox = $false
+
+    $label = New-Object System.Windows.Forms.Label
+    $label.Text = 'New session name:'
+    $label.Left = 15
+    $label.Top = 20
+    $label.AutoSize = $true
+
+    $nameBox = New-Object System.Windows.Forms.TextBox
+    $nameBox.Left = 15
+    $nameBox.Top = 45
+    $nameBox.Width = 475
+    $nameBox.Text = "$sourceHumanName - Copy"
+    $nameBox.ShortcutsEnabled = $true
+
+    $copyButton = New-Object System.Windows.Forms.Button
+    $copyButton.Text = 'Copy'
+    $copyButton.Left = 310
+    $copyButton.Top = 85
+    $copyButton.Width = 85
+
+    $cancelButton = New-Object System.Windows.Forms.Button
+    $cancelButton.Text = 'Cancel'
+    $cancelButton.Left = 405
+    $cancelButton.Top = 85
+    $cancelButton.Width = 85
+
+    $copyButton.Add_Click({
+        $newHumanName = $nameBox.Text.Trim()
+
+        if ([string]::IsNullOrWhiteSpace($newHumanName)) {
+            Show-PutterError 'Session name cannot be empty.'
+            return
+        }
+
+        $newRegistryName = ConvertTo-PuttySessionName $newHumanName
+        $newRegistryPath = Join-Path $SessionsPathPS $newRegistryName
+
+        if (Test-Path -LiteralPath $newRegistryPath) {
+            Show-PutterError "Session '$newHumanName' already exists."
+            return
+        }
+
+        try {
+            $backupFile = Backup-PuttySessions
+
+            Copy-Item -LiteralPath $sourceRegistryPath -Destination $newRegistryPath -Recurse -ErrorAction Stop
+
+            $dlg.Close()
+            Load-PuttySessions
+
+            foreach ($gridRow in $grid.Rows) {
+                if ([string]$gridRow.Cells['RegistryName'].Value -eq $newRegistryName) {
+                    $grid.ClearSelection()
+                    $gridRow.Selected = $true
+                    $grid.CurrentCell = $gridRow.Cells['Session']
+                    break
+                }
+            }
+
+            $statusLabel.Text = "Copied session: $sourceHumanName -> $newHumanName$(Get-BackupStatusSuffix $backupFile)"
+        }
+        catch {
+            Show-PutterError $_.Exception.Message 'Putter - Copy failed'
+        }
+    })
+
+    $cancelButton.Add_Click({
+        $dlg.Close()
+    })
+
+    $dlg.Controls.Add($label)
+    $dlg.Controls.Add($nameBox)
+    $dlg.Controls.Add($copyButton)
+    $dlg.Controls.Add($cancelButton)
+    $dlg.AcceptButton = $copyButton
+    $dlg.CancelButton = $cancelButton
+
+    $dlg.Add_Shown({
+        $nameBox.Focus()
+        $nameBox.SelectAll()
+    })
+
+    [void]$dlg.ShowDialog($form)
 }
 
 # ============================================================
@@ -991,7 +1171,7 @@ function Show-OptionsDialog {
     $dlg = New-Object System.Windows.Forms.Form
     $dlg.Text = 'Putter - Options'
     $dlg.Width = 650
-    $dlg.Height = 245
+    $dlg.Height = 285
     $dlg.StartPosition = 'CenterParent'
     $dlg.FormBorderStyle = 'FixedDialog'
     $dlg.MaximizeBox = $false
@@ -1029,16 +1209,23 @@ function Show-OptionsDialog {
     $openButton.Top = 115
     $openButton.Width = 100
 
+    $rememberWindowCheck = New-Object System.Windows.Forms.CheckBox
+    $rememberWindowCheck.Text = 'Remember window position and size'
+    $rememberWindowCheck.Left = 15
+    $rememberWindowCheck.Top = 155
+    $rememberWindowCheck.Width = 300
+    $rememberWindowCheck.Checked = [bool]$Config.RememberWindowGeometry
+
     $okButton = New-Object System.Windows.Forms.Button
     $okButton.Text = 'OK'
     $okButton.Left = 430
-    $okButton.Top = 155
+    $okButton.Top = 195
     $okButton.Width = 85
 
     $cancelButton = New-Object System.Windows.Forms.Button
     $cancelButton.Text = 'Cancel'
     $cancelButton.Left = 525
-    $cancelButton.Top = 155
+    $cancelButton.Top = 195
     $cancelButton.Width = 90
 
     $backupCheck.Add_CheckedChanged({
@@ -1086,6 +1273,7 @@ function Show-OptionsDialog {
 
         $Config.CreateBackups = $backupCheck.Checked
         $Config.BackupDirectory = $folderBox.Text
+        $Config.RememberWindowGeometry = $rememberWindowCheck.Checked
         Save-PutterConfig
 
         $dlg.DialogResult = [System.Windows.Forms.DialogResult]::OK
@@ -1102,6 +1290,7 @@ function Show-OptionsDialog {
     $dlg.Controls.Add($folderBox)
     $dlg.Controls.Add($browseButton)
     $dlg.Controls.Add($openButton)
+    $dlg.Controls.Add($rememberWindowCheck)
     $dlg.Controls.Add($okButton)
     $dlg.Controls.Add($cancelButton)
     $dlg.AcceptButton = $okButton
@@ -1264,6 +1453,9 @@ $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
 $multiEditItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $multiEditItem.Text = 'Multi-edit selected...'
 
+$copySessionItem = New-Object System.Windows.Forms.ToolStripMenuItem
+$copySessionItem.Text = 'Copy session...'
+
 $exportSelectedItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $exportSelectedItem.Text = 'Export selected sessions...'
 
@@ -1276,6 +1468,7 @@ $deleteSelectedItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $deleteSelectedItem.Text = 'Delete selected...'
 
 [void]$contextMenu.Items.Add($multiEditItem)
+[void]$contextMenu.Items.Add($copySessionItem)
 [void]$contextMenu.Items.Add($exportSelectedItem)
 [void]$contextMenu.Items.Add($separator)
 [void]$contextMenu.Items.Add($deleteCurrentItem)
@@ -1311,10 +1504,12 @@ $contextMenu.Add_Opening({
     $count = $grid.SelectedRows.Count
 
     $multiEditItem.Text = "Multi-edit selected ($count)..."
+    $copySessionItem.Text = 'Copy session...'
     $exportSelectedItem.Text = "Export selected sessions ($count)..."
     $deleteSelectedItem.Text = "Delete selected ($count)..."
 
     $multiEditItem.Enabled = ($count -gt 0)
+    $copySessionItem.Enabled = ($count -eq 1)
     $exportSelectedItem.Enabled = ($count -gt 0)
     $deleteSelectedItem.Enabled = ($count -gt 0)
     $deleteCurrentItem.Enabled = ($null -ne $script:ContextRow)
@@ -1335,8 +1530,36 @@ $multiEditItem.Add_Click({
     Show-MultiEditDialog
 })
 
+$copySessionItem.Add_Click({
+    $rows = @($grid.SelectedRows)
+
+    if ($rows.Count -eq 1) {
+        Copy-PutterSession -Row $rows[0]
+    }
+})
+
 $exportSelectedItem.Add_Click({
     Export-SelectedSessions
+})
+
+# Delete deletes the selected session(s) when the grid is not in inline edit mode.
+$grid.Add_KeyDown({
+    param($sender, $e)
+
+    if ($grid.IsCurrentCellInEditMode) {
+        return
+    }
+
+    if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Delete -and
+        $e.Modifiers -eq [System.Windows.Forms.Keys]::None) {
+        $rows = @($grid.SelectedRows)
+
+        if ($rows.Count -gt 0) {
+            $e.Handled = $true
+            $e.SuppressKeyPress = $true
+            Remove-PutterSessions -Rows $rows
+        }
+    }
 })
 
 # ============================================================
@@ -1349,5 +1572,9 @@ $form.Controls.Add($filterLabel)
 $form.Controls.Add($filterBox)
 $form.Controls.Add($grid)
 $form.Controls.Add($statusLabel)
+
+$form.Add_FormClosing({
+    Save-PutterWindowGeometry -Form $form
+})
 
 [void]$form.ShowDialog()

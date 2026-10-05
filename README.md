@@ -30,7 +30,9 @@ It reads PuTTY sessions directly from:
 
 ## Running
 
-Use the automatic launcher:
+For the simplest ready-to-run option, download `Putter.exe` from the [latest release](https://github.com/Witaminer/putter/releases/latest) and run it directly.
+
+To run Putter from source with automatic PowerShell selection, use:
 
 ```bat
 Putter.bat
@@ -54,7 +56,7 @@ pwsh.exe -NoProfile -ExecutionPolicy Bypass -File .\Putter.ps1
 
 Putter 0.19 has been tested with Windows PowerShell 5.1 and PowerShell 7.6.6 on Windows.
 
-No compilation or installer is required for the script version.
+No installer is required. The EXE is ready to run, while the script version requires a compatible PowerShell installation.
 
 ## Distribution
 

@@ -8,7 +8,7 @@ It reads PuTTY sessions directly from:
 
 ## Current version
 
-**0.14**
+**0.15**
 
 ## Features
 
@@ -109,3 +109,8 @@ The per-user configuration is stored in Putter.config.json next to the script an
 
 - Fixed restoring user-resized grid column proportions. Putter now temporarily disables Fill layout while applying all saved FillWeight values, then restores Fill mode so DataGridView cannot rebalance each value during the restore loop.
 - Putter now remembers the last grid sort expression, including the selected column and ascending/descending direction.
+
+
+## Version 0.15
+
+- Fixed another DataGridView Fill-mode timing issue when restoring column proportions. Saved FillWeight values are now applied only after the form is shown and the grid has completed its initial layout, preventing the first WinForms Fill calculation from overwriting the restored proportions.

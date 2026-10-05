@@ -3,8 +3,27 @@ Add-Type -AssemblyName System.Drawing
 
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
+# Windows PowerShell 5.1 uses the .NET Framework reference model, while
+# PowerShell 7+ uses modern .NET where WinForms and Drawing types are split
+# across several assemblies. Keep one source file and select references here.
+if ($PSVersionTable.PSEdition -eq 'Desktop') {
+    $PutterCompilerReferences = @(
+        'System.Windows.Forms',
+        'System.Drawing'
+    )
+}
+else {
+    $PutterCompilerReferences = @(
+        [System.Windows.Forms.Form].Assembly.Location,
+        [System.Windows.Forms.Message].Assembly.Location,
+        [System.Drawing.Color].Assembly.Location,
+        [System.Drawing.SolidBrush].Assembly.Location,
+        [System.ComponentModel.Component].Assembly.Location
+    ) | Select-Object -Unique
+}
+
 # ============================================================
-# Putter 0.17
+# Putter 0.18
 # A lightweight multi-session editor for PuTTY on Windows.
 # Find it on https://github.com/Witaminer/putter
 # ============================================================
@@ -192,9 +211,9 @@ public class PutterDarkRenderer : ToolStripProfessionalRenderer
         }
     }
 }
-'@ -ReferencedAssemblies 'System.Windows.Forms', 'System.Drawing' -WarningAction SilentlyContinue
+'@ -ReferencedAssemblies $PutterCompilerReferences -WarningAction SilentlyContinue
 
-$PutterVersion   = '0.17'
+$PutterVersion   = '0.18'
 $PutterBuildDate = '2026.10.05'
 $RepositoryUrl   = 'https://github.com/Witaminer/putter'
 

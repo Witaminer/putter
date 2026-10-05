@@ -933,7 +933,10 @@ function Import-RegistryFile {
 
     try {
         $lines = Get-Content -LiteralPath $dialog.FileName
-        $sectionLines = @($lines | Where-Object { $_ -match '^\[-?HKEY_' })
+        $sectionLines = @($lines | Where-Object {
+            $trimmed = $_.Trim()
+            $trimmed.StartsWith('[') -and $trimmed.EndsWith(']')
+        })
 
         if ($sectionLines.Count -eq 0) {
             throw 'The selected file does not contain any registry sections.'
@@ -942,105 +945,11 @@ function Import-RegistryFile {
         $allowedPrefix = 'HKEY_CURRENT_USER\Software\SimonTatham\PuTTY\Sessions'
 
         foreach ($line in $sectionLines) {
-            if ($line -notmatch '^\[-?(?<path>HKEY_[^\]]+)\]
+            $path = $line.Trim().TrimStart('[').TrimEnd(']')
 
-$contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
-
-$multiEditItem = New-Object System.Windows.Forms.ToolStripMenuItem
-$multiEditItem.Text = 'Multi-edit selected...'
-
-$exportSelectedItem = New-Object System.Windows.Forms.ToolStripMenuItem
-$exportSelectedItem.Text = 'Export selected sessions...'
-
-$separator = New-Object System.Windows.Forms.ToolStripSeparator
-
-$deleteCurrentItem = New-Object System.Windows.Forms.ToolStripMenuItem
-$deleteCurrentItem.Text = 'Delete this session...'
-
-$deleteSelectedItem = New-Object System.Windows.Forms.ToolStripMenuItem
-$deleteSelectedItem.Text = 'Delete selected...'
-
-[void]$contextMenu.Items.Add($multiEditItem)
-[void]$contextMenu.Items.Add($exportSelectedItem)
-[void]$contextMenu.Items.Add($separator)
-[void]$contextMenu.Items.Add($deleteCurrentItem)
-[void]$contextMenu.Items.Add($deleteSelectedItem)
-
-$grid.ContextMenuStrip = $contextMenu
-$script:ContextRow = $null
-
-$grid.Add_CellMouseDown({
-    param($sender, $e)
-
-    if ($e.Button -ne [System.Windows.Forms.MouseButtons]::Right) {
-        return
-    }
-
-    if ($e.RowIndex -lt 0) {
-        return
-    }
-
-    $script:ContextRow = $grid.Rows[$e.RowIndex]
-
-    if (-not $script:ContextRow.Selected) {
-        $grid.ClearSelection()
-        $script:ContextRow.Selected = $true
-
-        if ($e.ColumnIndex -ge 0) {
-            $grid.CurrentCell = $script:ContextRow.Cells[$e.ColumnIndex]
-        }
-    }
-})
-
-$contextMenu.Add_Opening({
-    $count = $grid.SelectedRows.Count
-
-    $multiEditItem.Text = "Multi-edit selected ($count)..."
-    $exportSelectedItem.Text = "Export selected sessions ($count)..."
-    $deleteSelectedItem.Text = "Delete selected ($count)..."
-
-    $multiEditItem.Enabled = ($count -gt 0)
-    $exportSelectedItem.Enabled = ($count -gt 0)
-    $deleteSelectedItem.Enabled = ($count -gt 0)
-    $deleteCurrentItem.Enabled = ($null -ne $script:ContextRow)
-})
-
-$deleteCurrentItem.Add_Click({
-    if ($null -ne $script:ContextRow) {
-        Remove-PutterSessions -Rows @($script:ContextRow)
-    }
-})
-
-$deleteSelectedItem.Add_Click({
-    $rows = @($grid.SelectedRows)
-    Remove-PutterSessions -Rows $rows
-})
-
-$multiEditItem.Add_Click({
-    Show-MultiEditDialog
-})
-
-$exportSelectedItem.Add_Click({
-    Export-SelectedSessions
-})
-
-# ============================================================
-# Run
-# ============================================================
-
-$form.MainMenuStrip = $menuStrip
-$form.Controls.Add($menuStrip)
-$form.Controls.Add($filterLabel)
-$form.Controls.Add($filterBox)
-$form.Controls.Add($grid)
-$form.Controls.Add($statusLabel)
-
-[void]$form.ShowDialog()
-) {
-                throw "Unsupported registry section: $line"
+            if ($path.StartsWith('-')) {
+                $path = $path.Substring(1)
             }
-
-            $path = $Matches.path
 
             if ($path -ne $allowedPrefix -and
                 -not $path.StartsWith($allowedPrefix + '\', [System.StringComparison]::OrdinalIgnoreCase)) {

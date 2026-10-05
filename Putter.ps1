@@ -99,15 +99,17 @@ $Config = [PSCustomObject]@{
 if (Test-Path -LiteralPath $ConfigPath) {
     try {
         $loadedConfig = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
+
         if ($null -ne $loadedConfig.CreateBackups) {
             $Config.CreateBackups = [bool]$loadedConfig.CreateBackups
         }
+
         if (-not [string]::IsNullOrWhiteSpace([string]$loadedConfig.BackupDirectory)) {
             $Config.BackupDirectory = [string]$loadedConfig.BackupDirectory
         }
     }
     catch {
-        # Invalid configuration is ignored and defaults are used.
+        # Invalid local configuration is ignored and defaults are used.
     }
 }
 
@@ -138,6 +140,7 @@ function Backup-PuttySessions {
     }
 
     $backupDir = [string]$Config.BackupDirectory
+
     if ([string]::IsNullOrWhiteSpace($backupDir)) {
         $backupDir = $DefaultBackupDir
     }
@@ -826,9 +829,12 @@ function Export-AllSessions {
     $dialog.AddExtension = $true
     $dialog.FileName = "PuTTY-Sessions-$(Get-Date -Format 'yyyyMMdd-HHmmss').reg"
 
-    if ($dialog.ShowDialog($form) -ne [System.Windows.Forms.DialogResult]::OK) { return }
+    if ($dialog.ShowDialog($form) -ne [System.Windows.Forms.DialogResult]::OK) {
+        return
+    }
 
     & reg.exe export $SessionsPathReg $dialog.FileName /y | Out-Null
+
     if ($LASTEXITCODE -ne 0) {
         Show-PutterError 'Failed to export PuTTY sessions.' 'Putter - Export failed'
         return
@@ -857,7 +863,9 @@ function Export-SelectedSessions {
     $dialog.AddExtension = $true
     $dialog.FileName = "PuTTY-Selected-Sessions-$(Get-Date -Format 'yyyyMMdd-HHmmss').reg"
 
-    if ($dialog.ShowDialog($form) -ne [System.Windows.Forms.DialogResult]::OK) { return }
+    if ($dialog.ShowDialog($form) -ne [System.Windows.Forms.DialogResult]::OK) {
+        return
+    }
 
     $tempFiles = @()
 
@@ -873,13 +881,17 @@ function Export-SelectedSessions {
             $tempFiles += $tempFile
 
             & reg.exe export $registryPathReg $tempFile /y | Out-Null
+
             if ($LASTEXITCODE -ne 0) {
                 throw "Failed to export session '$([string]$row.Cells['Session'].Value)'."
             }
 
             $lines = Get-Content -LiteralPath $tempFile
+
             foreach ($line in $lines) {
-                if ($line -eq 'Windows Registry Editor Version 5.00') { continue }
+                if ($line -eq 'Windows Registry Editor Version 5.00') {
+                    continue
+                }
 
                 if ($outputLines.Count -gt 0 -and
                     [string]::IsNullOrWhiteSpace($line) -and
@@ -890,7 +902,8 @@ function Export-SelectedSessions {
                 $outputLines.Add($line)
             }
 
-            if ($outputLines.Count -eq 0 -or -not [string]::IsNullOrWhiteSpace($outputLines[$outputLines.Count - 1])) {
+            if ($outputLines.Count -eq 0 -or
+                -not [string]::IsNullOrWhiteSpace($outputLines[$outputLines.Count - 1])) {
                 $outputLines.Add('')
             }
         }
@@ -914,7 +927,9 @@ function Import-RegistryFile {
     $dialog.Filter = 'Registry files (*.reg)|*.reg|All files (*.*)|*.*'
     $dialog.Multiselect = $false
 
-    if ($dialog.ShowDialog($form) -ne [System.Windows.Forms.DialogResult]::OK) { return }
+    if ($dialog.ShowDialog($form) -ne [System.Windows.Forms.DialogResult]::OK) {
+        return
+    }
 
     try {
         $lines = Get-Content -LiteralPath $dialog.FileName
@@ -1026,22 +1041,29 @@ $form.Controls.Add($statusLabel)
             }
 
             $path = $Matches.path
-            if ($path -ne $allowedPrefix -and -not $path.StartsWith($allowedPrefix + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
-                throw ('The file contains a registry section outside PuTTY Sessions:' + [Environment]::NewLine + [Environment]::NewLine + $path)
+
+            if ($path -ne $allowedPrefix -and
+                -not $path.StartsWith($allowedPrefix + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
+                throw ('The file contains a registry section outside PuTTY Sessions:' +
+                    [Environment]::NewLine + [Environment]::NewLine + $path)
             }
         }
 
         $answer = [System.Windows.Forms.MessageBox]::Show(
-            ('Import this .reg file into PuTTY Sessions?' + [Environment]::NewLine + [Environment]::NewLine + $dialog.FileName),
+            ('Import this .reg file into PuTTY Sessions?' +
+                [Environment]::NewLine + [Environment]::NewLine + $dialog.FileName),
             'Putter - Confirm import',
             [System.Windows.Forms.MessageBoxButtons]::YesNo,
             [System.Windows.Forms.MessageBoxIcon]::Question,
             [System.Windows.Forms.MessageBoxDefaultButton]::Button2
         )
 
-        if ($answer -ne [System.Windows.Forms.DialogResult]::Yes) { return }
+        if ($answer -ne [System.Windows.Forms.DialogResult]::Yes) {
+            return
+        }
 
         $backupFile = Backup-PuttySessions
+
         & reg.exe import $dialog.FileName | Out-Null
 
         if ($LASTEXITCODE -ne 0) {
@@ -1123,9 +1145,11 @@ function Show-OptionsDialog {
     $browseButton.Add_Click({
         $folderDialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $folderDialog.Description = 'Select the folder for automatic PuTTY session backups.'
+
         if (Test-Path -LiteralPath $folderBox.Text) {
             $folderDialog.SelectedPath = $folderBox.Text
         }
+
         if ($folderDialog.ShowDialog($dlg) -eq [System.Windows.Forms.DialogResult]::OK) {
             $folderBox.Text = $folderDialog.SelectedPath
         }
@@ -1133,10 +1157,15 @@ function Show-OptionsDialog {
 
     $openButton.Add_Click({
         $path = $folderBox.Text
-        if ([string]::IsNullOrWhiteSpace($path)) { return }
+
+        if ([string]::IsNullOrWhiteSpace($path)) {
+            return
+        }
+
         if (-not (Test-Path -LiteralPath $path)) {
             New-Item -ItemType Directory -Path $path -Force | Out-Null
         }
+
         Start-Process explorer.exe -ArgumentList $path
     })
 
@@ -1149,6 +1178,7 @@ function Show-OptionsDialog {
         $Config.CreateBackups = $backupCheck.Checked
         $Config.BackupDirectory = $folderBox.Text
         Save-PutterConfig
+
         $dlg.DialogResult = [System.Windows.Forms.DialogResult]::OK
         $dlg.Close()
     })
@@ -1187,10 +1217,19 @@ function Show-AboutDialog {
     $title.Top = 20
     $title.Width = 460
     $title.Height = 28
-    $title.Font = New-Object System.Drawing.Font($title.Font.FontFamily, 14, [System.Drawing.FontStyle]::Bold)
+    $title.Font = New-Object System.Drawing.Font(
+        $title.Font.FontFamily,
+        14,
+        [System.Drawing.FontStyle]::Bold
+    )
 
     $description = New-Object System.Windows.Forms.Label
-    $description.Text = "A lightweight multi-session editor for PuTTY on Windows." + [Environment]::NewLine + [Environment]::NewLine + "Build date: $PutterBuildDate" + [Environment]::NewLine + 'License: GNU GPL v3.0'
+    $description.Text =
+        "A lightweight multi-session editor for PuTTY on Windows." +
+        [Environment]::NewLine + [Environment]::NewLine +
+        "Build date: $PutterBuildDate" +
+        [Environment]::NewLine +
+        'License: GNU GPL v3.0'
     $description.Left = 20
     $description.Top = 60
     $description.Width = 460
@@ -1202,11 +1241,16 @@ function Show-AboutDialog {
     $link.Top = 150
     $link.Width = 460
     $link.Height = 25
-    $link.Add_LinkClicked({ Start-Process $RepositoryUrl })
+    $link.Add_LinkClicked({
+        Start-Process $RepositoryUrl
+    })
 
     $backupInfo = New-Object System.Windows.Forms.Label
     $backupState = if ($Config.CreateBackups) { 'Enabled' } else { 'Disabled' }
-    $backupInfo.Text = "Automatic backups: $backupState" + [Environment]::NewLine + "Backup folder: $($Config.BackupDirectory)"
+    $backupInfo.Text =
+        "Automatic backups: $backupState" +
+        [Environment]::NewLine +
+        "Backup folder: $($Config.BackupDirectory)"
     $backupInfo.Left = 20
     $backupInfo.Top = 180
     $backupInfo.Width = 460
@@ -1217,7 +1261,9 @@ function Show-AboutDialog {
     $closeButton.Left = 395
     $closeButton.Top = 225
     $closeButton.Width = 85
-    $closeButton.Add_Click({ $dlg.Close() })
+    $closeButton.Add_Click({
+        $dlg.Close()
+    })
 
     $dlg.Controls.Add($title)
     $dlg.Controls.Add($description)
@@ -1236,26 +1282,34 @@ function Show-AboutDialog {
 $menuStrip = New-Object System.Windows.Forms.MenuStrip
 
 $fileMenu = New-Object System.Windows.Forms.ToolStripMenuItem
-$fileMenu.Text = '&File'
+$fileMenu.Text = 'File'
 
 $exportAllItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $exportAllItem.Text = 'Export all sessions...'
-$exportAllItem.Add_Click({ Export-AllSessions })
+$exportAllItem.Add_Click({
+    Export-AllSessions
+})
 
 $exportSelectedFileItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $exportSelectedFileItem.Text = 'Export selected sessions...'
-$exportSelectedFileItem.Add_Click({ Export-SelectedSessions })
+$exportSelectedFileItem.Add_Click({
+    Export-SelectedSessions
+})
 
 $importItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $importItem.Text = 'Import .reg...'
-$importItem.Add_Click({ Import-RegistryFile })
+$importItem.Add_Click({
+    Import-RegistryFile
+})
 
 $fileSeparator1 = New-Object System.Windows.Forms.ToolStripSeparator
 $fileSeparator2 = New-Object System.Windows.Forms.ToolStripSeparator
 
 $exitItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $exitItem.Text = 'Exit'
-$exitItem.Add_Click({ $form.Close() })
+$exitItem.Add_Click({
+    $form.Close()
+})
 
 [void]$fileMenu.DropDownItems.Add($exportAllItem)
 [void]$fileMenu.DropDownItems.Add($exportSelectedFileItem)
@@ -1265,19 +1319,23 @@ $exitItem.Add_Click({ $form.Close() })
 [void]$fileMenu.DropDownItems.Add($exitItem)
 
 $optionsMenu = New-Object System.Windows.Forms.ToolStripMenuItem
-$optionsMenu.Text = '&Options'
+$optionsMenu.Text = 'Options'
 
 $settingsItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $settingsItem.Text = 'Settings...'
-$settingsItem.Add_Click({ Show-OptionsDialog })
+$settingsItem.Add_Click({
+    Show-OptionsDialog
+})
 [void]$optionsMenu.DropDownItems.Add($settingsItem)
 
 $helpMenu = New-Object System.Windows.Forms.ToolStripMenuItem
-$helpMenu.Text = '&Help'
+$helpMenu.Text = 'Help'
 
 $aboutItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $aboutItem.Text = 'About Putter...'
-$aboutItem.Add_Click({ Show-AboutDialog })
+$aboutItem.Add_Click({
+    Show-AboutDialog
+})
 [void]$helpMenu.DropDownItems.Add($aboutItem)
 
 [void]$menuStrip.Items.Add($fileMenu)

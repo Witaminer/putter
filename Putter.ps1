@@ -23,7 +23,7 @@ else {
 }
 
 # ============================================================
-# Putter 0.18
+# Putter 0.19
 # A lightweight multi-session editor for PuTTY on Windows.
 # Find it on https://github.com/Witaminer/putter
 # ============================================================
@@ -213,7 +213,7 @@ public class PutterDarkRenderer : ToolStripProfessionalRenderer
 }
 '@ -ReferencedAssemblies $PutterCompilerReferences -WarningAction SilentlyContinue
 
-$PutterVersion   = '0.18'
+$PutterVersion   = '0.19'
 $PutterBuildDate = '2026.10.05'
 $RepositoryUrl   = 'https://github.com/Witaminer/putter'
 
@@ -241,8 +241,20 @@ function New-PutterIcon {
 
 $SessionsPathPS   = 'HKCU:\Software\SimonTatham\PuTTY\Sessions'
 $SessionsPathReg  = 'HKCU\Software\SimonTatham\PuTTY\Sessions'
-$ConfigPath       = Join-Path $PSScriptRoot 'Putter.config.json'
-$DefaultBackupDir = Join-Path $PSScriptRoot 'Backups'
+
+# Resolve Putter's working directory for both the original script and PS2EXE builds.
+$PutterRoot = if ($PSScriptRoot) {
+    $PSScriptRoot
+}
+elseif ($ScriptRoot) {
+    $ScriptRoot
+}
+else {
+    [AppDomain]::CurrentDomain.BaseDirectory
+}
+
+$ConfigPath       = Join-Path $PutterRoot 'Putter.config.json'
+$DefaultBackupDir = Join-Path $PutterRoot 'Backups'
 
 $Config = [PSCustomObject]@{
     CreateBackups          = $true
@@ -2006,6 +2018,8 @@ function Show-AboutDialog {
         "A lightweight multi-session editor for PuTTY on Windows." +
         [Environment]::NewLine + [Environment]::NewLine +
         "Build date: $PutterBuildDate" +
+        [Environment]::NewLine +
+        "PowerShell: $($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))" +
         [Environment]::NewLine +
         'License: GNU GPL v3.0'
     $description.Left = 20

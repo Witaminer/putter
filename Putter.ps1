@@ -1,8 +1,10 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+[System.Windows.Forms.Application]::EnableVisualStyles()
+
 # ============================================================
-# Putter 0.16
+# Putter 0.17
 # A lightweight multi-session editor for PuTTY on Windows.
 # Find it on https://github.com/Witaminer/putter
 # ============================================================
@@ -192,7 +194,7 @@ public class PutterDarkRenderer : ToolStripProfessionalRenderer
 }
 '@ -ReferencedAssemblies 'System.Windows.Forms', 'System.Drawing' -WarningAction SilentlyContinue
 
-$PutterVersion   = '0.16'
+$PutterVersion   = '0.17'
 $PutterBuildDate = '2026.10.05'
 $RepositoryUrl   = 'https://github.com/Witaminer/putter'
 
@@ -682,7 +684,7 @@ $grid = New-Object PutterDataGridView
 $grid.Left = 10
 $grid.Top = 69
 $grid.Width = 1210
-$grid.Height = 596
+$grid.Height = 550
 $grid.Anchor = 'Top,Bottom,Left,Right'
 $grid.AllowUserToAddRows = $false
 $grid.AllowUserToDeleteRows = $false
@@ -692,6 +694,51 @@ $grid.SelectionMode = 'FullRowSelect'
 $grid.MultiSelect = $true
 $grid.AutoSizeColumnsMode = 'Fill'
 $grid.EditMode = 'EditProgrammatically'
+
+$refreshButton = New-Object System.Windows.Forms.Button
+$refreshButton.Text = 'Refresh'
+$refreshButton.Left = 10
+$refreshButton.Top = 630
+$refreshButton.Width = 100
+$refreshButton.Height = 32
+$refreshButton.Anchor = 'Bottom,Left'
+$refreshButton.FlatStyle = [System.Windows.Forms.FlatStyle]::System
+
+$openButtonMain = New-Object System.Windows.Forms.Button
+$openButtonMain.Text = 'Open'
+$openButtonMain.Left = 825
+$openButtonMain.Top = 630
+$openButtonMain.Width = 90
+$openButtonMain.Height = 32
+$openButtonMain.Anchor = 'Bottom,Right'
+$openButtonMain.FlatStyle = [System.Windows.Forms.FlatStyle]::System
+
+$renameButton = New-Object System.Windows.Forms.Button
+$renameButton.Text = 'Rename'
+$renameButton.Left = 920
+$renameButton.Top = 630
+$renameButton.Width = 90
+$renameButton.Height = 32
+$renameButton.Anchor = 'Bottom,Right'
+$renameButton.FlatStyle = [System.Windows.Forms.FlatStyle]::System
+
+$copyButtonMain = New-Object System.Windows.Forms.Button
+$copyButtonMain.Text = 'Copy'
+$copyButtonMain.Left = 1015
+$copyButtonMain.Top = 630
+$copyButtonMain.Width = 90
+$copyButtonMain.Height = 32
+$copyButtonMain.Anchor = 'Bottom,Right'
+$copyButtonMain.FlatStyle = [System.Windows.Forms.FlatStyle]::System
+
+$deleteButtonMain = New-Object System.Windows.Forms.Button
+$deleteButtonMain.Text = 'Delete'
+$deleteButtonMain.Left = 1110
+$deleteButtonMain.Top = 630
+$deleteButtonMain.Width = 90
+$deleteButtonMain.Height = 32
+$deleteButtonMain.Anchor = 'Bottom,Right'
+$deleteButtonMain.FlatStyle = [System.Windows.Forms.FlatStyle]::System
 
 $statusLabel = New-Object System.Windows.Forms.Label
 $statusLabel.Left = 10
@@ -725,13 +772,22 @@ $startColumn.Name = 'Start'
 $startColumn.HeaderText = ''
 $startColumn.Text = 'Open'
 $startColumn.UseColumnTextForButtonValue = $true
+$startColumn.FlatStyle = [System.Windows.Forms.FlatStyle]::System
 $startColumn.Width = 60
 $startColumn.MinimumWidth = 60
 $startColumn.AutoSizeMode = [System.Windows.Forms.DataGridViewAutoSizeColumnMode]::None
 [void]$grid.Columns.Insert(0, $startColumn)
 
 function Update-Status {
-    $statusLabel.Text = "Sessions: $($table.Rows.Count)    Selected: $($grid.SelectedRows.Count)"
+    $selectedCount = $grid.SelectedRows.Count
+    $statusLabel.Text = "Sessions: $($table.Rows.Count)    Selected: $selectedCount"
+
+    if ($null -ne $openButtonMain) {
+        $openButtonMain.Enabled = ($selectedCount -gt 0)
+        $renameButton.Enabled = ($selectedCount -eq 1)
+        $copyButtonMain.Enabled = ($selectedCount -eq 1)
+        $deleteButtonMain.Enabled = ($selectedCount -gt 0)
+    }
 }
 
 function Load-PuttySessions {
@@ -805,6 +861,39 @@ $grid.Add_CellContentClick({
 
 $grid.Add_SelectionChanged({
     Update-Status
+})
+
+$refreshButton.Add_Click({
+    Load-PuttySessions
+})
+
+$openButtonMain.Add_Click({
+    Start-PutterSessions
+})
+
+$renameButton.Add_Click({
+    $rows = @($grid.SelectedRows)
+
+    if ($rows.Count -eq 1) {
+        $grid.CurrentCell = $rows[0].Cells['Session']
+        $grid.BeginEdit($true)
+    }
+})
+
+$copyButtonMain.Add_Click({
+    $rows = @($grid.SelectedRows)
+
+    if ($rows.Count -eq 1) {
+        Copy-PutterSession -Row $rows[0]
+    }
+})
+
+$deleteButtonMain.Add_Click({
+    $rows = @($grid.SelectedRows)
+
+    if ($rows.Count -gt 0) {
+        Remove-PutterSessions -Rows $rows
+    }
 })
 
 # ============================================================
@@ -2161,11 +2250,17 @@ $form.Controls.Add($menuStrip)
 $form.Controls.Add($filterLabel)
 $form.Controls.Add($filterBox)
 $form.Controls.Add($grid)
+$form.Controls.Add($refreshButton)
+$form.Controls.Add($openButtonMain)
+$form.Controls.Add($renameButton)
+$form.Controls.Add($copyButtonMain)
+$form.Controls.Add($deleteButtonMain)
 $form.Controls.Add($statusLabel)
 
 # Restore only after anchored controls exist, so they resize with the form immediately.
 Restore-PutterWindowGeometry -Form $form
 Apply-PutterMainTheme
+Update-Status
 Restore-PutterSort
 
 $form.Add_Shown({

@@ -74,6 +74,22 @@ The EXE is provided for convenience, not to hide or replace the source. PS2EXE e
 
 **Important:** the current `Putter.exe` build is not digitally signed. Windows SmartScreen or other security software may therefore display a warning when the executable is downloaded or started. Users who prefer not to run an unsigned executable can use the fully available `Putter.ps1` source with one of the provided BAT launchers instead.
 
+## Building the executable
+
+The ready-to-run `Putter.exe` release is built directly from the same `Putter.ps1` source using **ps2exe 1.0.18**.
+
+Build command:
+
+```powershell
+Invoke-ps2exe .\Putter.ps1 .\Putter.exe -noConsole
+```
+
+To verify the installed ps2exe version:
+
+```powershell
+Get-Module ps2exe -ListAvailable | Select-Object Name, Version, Path
+```
+
 ## Compatibility
 
 Putter requires Windows PowerShell 5.1 or a compatible PowerShell 7.x installation.

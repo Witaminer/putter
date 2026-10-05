@@ -64,7 +64,7 @@ public class PutterDataGridView : DataGridView
         return base.ProcessCmdKey(ref msg, keyData);
     }
 }
-'@ -ReferencedAssemblies 'System.Windows.Forms', 'System.Drawing'
+'@ -ReferencedAssemblies 'System.Windows.Forms', 'System.Drawing' -WarningAction SilentlyContinue
 
 $SessionsPathPS  = 'HKCU:\Software\SimonTatham\PuTTY\Sessions'
 $SessionsPathReg = 'HKCU\Software\SimonTatham\PuTTY\Sessions'

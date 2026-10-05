@@ -97,6 +97,25 @@ Network activity can still occur as a direct result of user actions. For example
 
 The complete PowerShell source is available in this repository so the program's behavior can be inspected directly.
 
+## Code signing policy
+
+For releases signed through the SignPath Foundation program:
+
+**Free code signing provided by SignPath.io, certificate by SignPath Foundation.**
+
+Project roles:
+
+- Committer and reviewer: [Witaminer](https://github.com/Witaminer)
+- Approver: [Witaminer](https://github.com/Witaminer)
+
+Only Putter artifacts built from this repository's source code are eligible for signing. Signing requests are approved manually by the project maintainer.
+
+Privacy policy for code signing purposes:
+
+> This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
+
+Putter does not collect telemetry, analytics, usage statistics, credentials, PuTTY session data, registry contents, or other user data. Network access occurs only as a direct result of user-requested actions, such as launching a configured PuTTY session or opening the project link in a web browser.
+
 ## Disclaimer
 
 Putter modifies PuTTY session data in the Windows Registry. Features such as rename, multi-edit, import, and delete can therefore make real changes to saved sessions.

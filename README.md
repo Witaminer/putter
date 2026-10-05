@@ -8,7 +8,7 @@ It reads PuTTY sessions directly from:
 
 ## Current version
 
-**0.17**
+**0.18**
 
 ## Features
 
@@ -132,3 +132,11 @@ The per-user configuration is stored in Putter.config.json next to the script an
 - **Open** and **Delete** are enabled for one or more selected sessions.
 - **Rename** and **Copy** are enabled only when exactly one session is selected.
 - **Refresh** is always available and reloads the PuTTY session list.
+
+
+## Version 0.18
+
+- Added one-script compatibility logic for both Windows PowerShell 5.1 and PowerShell 7+.
+- Windows PowerShell 5.1 keeps the original .NET Framework references.
+- PowerShell 7+ resolves the loaded WinForms, Drawing, and ComponentModel assembly paths dynamically before compiling Putter's small C# helper classes.
+- No separate PS5/PS7 script is required.

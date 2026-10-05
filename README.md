@@ -8,7 +8,7 @@ It reads PuTTY sessions directly from:
 
 ## Current version
 
-**0.13**
+**0.14**
 
 ## Features
 
@@ -103,3 +103,9 @@ The per-user configuration is stored in Putter.config.json next to the script an
 
 - Night mode now uses a custom ToolStrip renderer so menu backgrounds, hover states, text, separators, and dropdowns are drawn with the dark palette instead of Windows light-menu colors.
 - User-resized grid column widths are now remembered between runs. Because the grid uses Fill mode, Putter stores each data column's FillWeight so the chosen proportions survive window resizing.
+
+
+## Version 0.14
+
+- Fixed restoring user-resized grid column proportions. Putter now temporarily disables Fill layout while applying all saved FillWeight values, then restores Fill mode so DataGridView cannot rebalance each value during the restore loop.
+- Putter now remembers the last grid sort expression, including the selected column and ascending/descending direction.

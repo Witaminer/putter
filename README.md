@@ -18,10 +18,10 @@ It reads PuTTY sessions directly from:
 - Double-click a cell to edit it
 - Press Enter to save an inline edit
 - Standard text editing shortcuts while editing cells:
-  - Ctrl+C / Ctrl+Insert — Copy
-  - Ctrl+V / Shift+Insert — Paste
-  - Ctrl+X / Shift+Delete — Cut
-  - Ctrl+A — Select all
+  - Ctrl+C / Ctrl+Insert - Copy
+  - Ctrl+V / Shift+Insert - Paste
+  - Ctrl+X / Shift+Delete - Cut
+  - Ctrl+A - Select all
 - Rename sessions
 - Delete one or multiple sessions from the context menu
 - Multi-edit selected sessions
@@ -96,4 +96,4 @@ The per-user configuration is stored in Putter.config.json next to the script an
 - Fixed Night mode menu rendering with a dedicated dark ToolStrip renderer.
 - Added configurable grid font size and a Normal/Bold choice in **Options -> Settings...**.
 - Disabled manual row-height resizing in the session grid.
-- Added a compact **▶** button column to launch an individual session directly.
+- Added a compact **>** button column to launch an individual session directly.

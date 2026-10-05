@@ -8,7 +8,7 @@ It reads PuTTY sessions directly from:
 
 ## Current version
 
-**0.10**
+**0.11**
 
 ## Features
 
@@ -80,3 +80,12 @@ The per-user configuration is stored in Putter.config.json next to the script an
 
 - Window geometry is restored only after the anchored controls have been created, so the session grid starts at the correct size immediately.
 - Maximized window state is now remembered and restored in addition to the normal window position and size.
+
+
+## Version 0.11
+
+- Added optional **Night mode** with a light-on-dark palette for the main window and Putter dialogs.
+- Added a configurable **PuTTY launcher** in **Options -> Settings...**. The browse dialog prefers `.exe`, `.lnk`, `.bat`, and `.cmd`, while still allowing **All files (*.*)**.
+- Added a configurable delay between launching multiple sessions.
+- Right-click the session grid and choose **Open session** or **Open selected sessions (N)**.
+- Press **Enter** outside inline editing to launch the selected session or sessions. Enter still commits an active cell edit.

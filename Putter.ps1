@@ -2,7 +2,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 # ============================================================
-# Putter 0.10
+# Putter 0.11
 # A lightweight multi-session editor for PuTTY on Windows.
 # Find it on https://github.com/Witaminer/putter
 # ============================================================
@@ -13,6 +13,8 @@ using System.Windows.Forms;
 
 public class PutterDataGridView : DataGridView
 {
+    public event EventHandler SessionLaunchRequested;
+
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
         TextBoxBase textBox = this.EditingControl as TextBoxBase;
@@ -77,12 +79,27 @@ public class PutterDataGridView : DataGridView
             }
         }
 
+        Keys outsideEditKeyCode = keyData & Keys.KeyCode;
+        Keys outsideEditModifiers = keyData & Keys.Modifiers;
+
+        if (!this.IsCurrentCellInEditMode &&
+            outsideEditModifiers == Keys.None &&
+            outsideEditKeyCode == Keys.Enter)
+        {
+            if (SessionLaunchRequested != null)
+            {
+                SessionLaunchRequested(this, EventArgs.Empty);
+            }
+
+            return true;
+        }
+
         return base.ProcessCmdKey(ref msg, keyData);
     }
 }
 '@ -ReferencedAssemblies 'System.Windows.Forms', 'System.Drawing' -WarningAction SilentlyContinue
 
-$PutterVersion   = '0.10'
+$PutterVersion   = '0.11'
 $PutterBuildDate = '2026.10.05'
 $RepositoryUrl   = 'https://github.com/Witaminer/putter'
 
@@ -100,6 +117,9 @@ $Config = [PSCustomObject]@{
     WindowWidth            = $null
     WindowHeight           = $null
     WindowState            = 'Normal'
+    NightMode              = $false
+    PuttyLauncher          = ''
+    LaunchDelayMilliseconds = 1000
 }
 
 if (Test-Path -LiteralPath $ConfigPath) {
@@ -126,6 +146,18 @@ if (Test-Path -LiteralPath $ConfigPath) {
 
         if (-not [string]::IsNullOrWhiteSpace([string]$loadedConfig.WindowState)) {
             $Config.WindowState = [string]$loadedConfig.WindowState
+        }
+
+        if ($null -ne $loadedConfig.NightMode) {
+            $Config.NightMode = [bool]$loadedConfig.NightMode
+        }
+
+        if ($null -ne $loadedConfig.PuttyLauncher) {
+            $Config.PuttyLauncher = [string]$loadedConfig.PuttyLauncher
+        }
+
+        if ($null -ne $loadedConfig.LaunchDelayMilliseconds) {
+            $Config.LaunchDelayMilliseconds = [Math]::Max(0, [int]$loadedConfig.LaunchDelayMilliseconds)
         }
     }
     catch {
@@ -273,6 +305,108 @@ function Save-PutterWindowGeometry {
     }
 
     Save-PutterConfig
+}
+
+function Get-PutterTheme {
+    if ($Config.NightMode) {
+        return [PSCustomObject]@{
+            BackColor          = [System.Drawing.Color]::FromArgb(32, 32, 32)
+            ForeColor          = [System.Drawing.Color]::FromArgb(232, 232, 232)
+            InputBackColor     = [System.Drawing.Color]::FromArgb(45, 45, 48)
+            HeaderBackColor    = [System.Drawing.Color]::FromArgb(52, 52, 56)
+            GridColor          = [System.Drawing.Color]::FromArgb(70, 70, 74)
+            ButtonBackColor    = [System.Drawing.Color]::FromArgb(55, 55, 58)
+            SelectionBackColor = [System.Drawing.SystemColors]::Highlight
+            SelectionForeColor = [System.Drawing.SystemColors]::HighlightText
+        }
+    }
+
+    return [PSCustomObject]@{
+        BackColor          = [System.Drawing.SystemColors]::Control
+        ForeColor          = [System.Drawing.SystemColors]::ControlText
+        InputBackColor     = [System.Drawing.SystemColors]::Window
+        HeaderBackColor    = [System.Drawing.SystemColors]::Control
+        GridColor          = [System.Drawing.SystemColors]::ControlDark
+        ButtonBackColor    = [System.Drawing.SystemColors]::Control
+        SelectionBackColor = [System.Drawing.SystemColors]::Highlight
+        SelectionForeColor = [System.Drawing.SystemColors]::HighlightText
+    }
+}
+
+function Apply-PutterThemeToToolStripItems {
+    param(
+        [System.Windows.Forms.ToolStripItemCollection]$Items,
+        $Theme
+    )
+
+    foreach ($item in $Items) {
+        $item.BackColor = $Theme.BackColor
+        $item.ForeColor = $Theme.ForeColor
+
+        if ($item -is [System.Windows.Forms.ToolStripDropDownItem]) {
+            $item.DropDown.BackColor = $Theme.BackColor
+            $item.DropDown.ForeColor = $Theme.ForeColor
+            Apply-PutterThemeToToolStripItems -Items $item.DropDownItems -Theme $Theme
+        }
+    }
+}
+
+function Apply-PutterTheme {
+    param([System.Windows.Forms.Control]$Control)
+
+    $theme = Get-PutterTheme
+
+    if ($Control -is [System.Windows.Forms.DataGridView]) {
+        $Control.BackgroundColor = $theme.InputBackColor
+        $Control.GridColor = $theme.GridColor
+        $Control.EnableHeadersVisualStyles = $false
+
+        $Control.DefaultCellStyle.BackColor = $theme.InputBackColor
+        $Control.DefaultCellStyle.ForeColor = $theme.ForeColor
+        $Control.DefaultCellStyle.SelectionBackColor = $theme.SelectionBackColor
+        $Control.DefaultCellStyle.SelectionForeColor = $theme.SelectionForeColor
+
+        $Control.ColumnHeadersDefaultCellStyle.BackColor = $theme.HeaderBackColor
+        $Control.ColumnHeadersDefaultCellStyle.ForeColor = $theme.ForeColor
+        $Control.ColumnHeadersDefaultCellStyle.SelectionBackColor = $theme.HeaderBackColor
+        $Control.ColumnHeadersDefaultCellStyle.SelectionForeColor = $theme.ForeColor
+
+        $Control.RowHeadersDefaultCellStyle.BackColor = $theme.HeaderBackColor
+        $Control.RowHeadersDefaultCellStyle.ForeColor = $theme.ForeColor
+    }
+    elseif ($Control -is [System.Windows.Forms.TextBoxBase] -or
+            $Control -is [System.Windows.Forms.ComboBox] -or
+            $Control -is [System.Windows.Forms.NumericUpDown]) {
+        $Control.BackColor = $theme.InputBackColor
+        $Control.ForeColor = $theme.ForeColor
+    }
+    elseif ($Control -is [System.Windows.Forms.Button]) {
+        $Control.BackColor = $theme.ButtonBackColor
+        $Control.ForeColor = $theme.ForeColor
+        $Control.UseVisualStyleBackColor = -not $Config.NightMode
+    }
+    else {
+        $Control.BackColor = $theme.BackColor
+        $Control.ForeColor = $theme.ForeColor
+    }
+
+    foreach ($child in $Control.Controls) {
+        Apply-PutterTheme -Control $child
+    }
+}
+
+function Apply-PutterMainTheme {
+    $theme = Get-PutterTheme
+
+    Apply-PutterTheme -Control $form
+
+    $menuStrip.BackColor = $theme.BackColor
+    $menuStrip.ForeColor = $theme.ForeColor
+    Apply-PutterThemeToToolStripItems -Items $menuStrip.Items -Theme $theme
+
+    $contextMenu.BackColor = $theme.BackColor
+    $contextMenu.ForeColor = $theme.ForeColor
+    Apply-PutterThemeToToolStripItems -Items $contextMenu.Items -Theme $theme
 }
 
 # ============================================================
@@ -664,6 +798,7 @@ function Copy-PutterSession {
         $nameBox.SelectAll()
     })
 
+    Apply-PutterTheme -Control $dlg
     [void]$dlg.ShowDialog($form)
 }
 
@@ -1008,7 +1143,54 @@ function Show-MultiEditDialog {
     $dlg.AcceptButton = $applyButton
     $dlg.CancelButton = $cancelButton
 
+    Apply-PutterTheme -Control $dlg
     [void]$dlg.ShowDialog($form)
+}
+
+function Start-PutterSessions {
+    $selectedRows = @($grid.SelectedRows | Sort-Object Index)
+
+    if ($selectedRows.Count -eq 0) {
+        return
+    }
+
+    $launcher = [string]$Config.PuttyLauncher
+
+    if ([string]::IsNullOrWhiteSpace($launcher)) {
+        Show-PutterError 'No PuTTY launcher is configured. Open Options -> Settings and select a launcher.' 'Putter - Launcher not configured'
+        return
+    }
+
+    if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
+        Show-PutterError ("PuTTY launcher not found:" + [Environment]::NewLine + [Environment]::NewLine + $launcher) 'Putter - Launcher not found'
+        return
+    }
+
+    $delay = [Math]::Max(0, [int]$Config.LaunchDelayMilliseconds)
+    $launched = 0
+
+    foreach ($row in $selectedRows) {
+        $sessionName = [string]$row.Cells['Session'].Value
+        $quotedSessionName = '"' + $sessionName.Replace('"', '\"') + '"'
+        $arguments = '-load ' + $quotedSessionName
+
+        try {
+            Start-Process -FilePath $launcher -ArgumentList $arguments -ErrorAction Stop
+            $launched++
+        }
+        catch {
+            Show-PutterError ("Failed to start session '$sessionName'." +
+                [Environment]::NewLine + [Environment]::NewLine +
+                $_.Exception.Message) 'Putter - Launch failed'
+            return
+        }
+
+        if ($launched -lt $selectedRows.Count -and $delay -gt 0) {
+            Start-Sleep -Milliseconds $delay
+        }
+    }
+
+    $statusLabel.Text = "Started sessions: $launched"
 }
 
 # ============================================================
@@ -1185,7 +1367,7 @@ function Show-OptionsDialog {
     $dlg = New-Object System.Windows.Forms.Form
     $dlg.Text = 'Putter - Options'
     $dlg.Width = 650
-    $dlg.Height = 285
+    $dlg.Height = 430
     $dlg.StartPosition = 'CenterParent'
     $dlg.FormBorderStyle = 'FixedDialog'
     $dlg.MaximizeBox = $false
@@ -1230,16 +1412,58 @@ function Show-OptionsDialog {
     $rememberWindowCheck.Width = 300
     $rememberWindowCheck.Checked = [bool]$Config.RememberWindowGeometry
 
+    $nightModeCheck = New-Object System.Windows.Forms.CheckBox
+    $nightModeCheck.Text = 'Night mode'
+    $nightModeCheck.Left = 15
+    $nightModeCheck.Top = 185
+    $nightModeCheck.Width = 300
+    $nightModeCheck.Checked = [bool]$Config.NightMode
+
+    $launcherLabel = New-Object System.Windows.Forms.Label
+    $launcherLabel.Text = 'PuTTY launcher:'
+    $launcherLabel.Left = 15
+    $launcherLabel.Top = 225
+    $launcherLabel.AutoSize = $true
+
+    $launcherBox = New-Object System.Windows.Forms.TextBox
+    $launcherBox.Left = 15
+    $launcherBox.Top = 245
+    $launcherBox.Width = 500
+    $launcherBox.Text = [string]$Config.PuttyLauncher
+    $launcherBox.ShortcutsEnabled = $true
+
+    $launcherBrowseButton = New-Object System.Windows.Forms.Button
+    $launcherBrowseButton.Text = 'Browse...'
+    $launcherBrowseButton.Left = 525
+    $launcherBrowseButton.Top = 243
+    $launcherBrowseButton.Width = 90
+
+    $delayLabel = New-Object System.Windows.Forms.Label
+    $delayLabel.Text = 'Delay between sessions (seconds):'
+    $delayLabel.Left = 15
+    $delayLabel.Top = 285
+    $delayLabel.AutoSize = $true
+
+    $delayBox = New-Object System.Windows.Forms.NumericUpDown
+    $delayBox.Left = 220
+    $delayBox.Top = 282
+    $delayBox.Width = 90
+    $delayBox.DecimalPlaces = 1
+    $delayBox.Increment = [decimal]0.1
+    $delayBox.Minimum = [decimal]0
+    $delayBox.Maximum = [decimal]60
+    $delayBox.Value = [decimal]([Math]::Min(60000, [Math]::Max(0, [int]$Config.LaunchDelayMilliseconds))) / 1000
+
     $okButton = New-Object System.Windows.Forms.Button
     $okButton.Text = 'OK'
     $okButton.Left = 430
-    $okButton.Top = 195
+    $okButton.Top = 340
     $okButton.Width = 85
 
     $cancelButton = New-Object System.Windows.Forms.Button
     $cancelButton.Text = 'Cancel'
     $cancelButton.Left = 525
-    $cancelButton.Top = 195
+    $cancelButton.Top = 340
     $cancelButton.Width = 90
 
     $backupCheck.Add_CheckedChanged({
@@ -1279,6 +1503,29 @@ function Show-OptionsDialog {
         Start-Process explorer.exe -ArgumentList $path
     })
 
+    $launcherBrowseButton.Add_Click({
+        $launcherDialog = New-Object System.Windows.Forms.OpenFileDialog
+        $launcherDialog.Title = 'Select PuTTY launcher'
+        $launcherDialog.Filter = 'Launchers (*.exe;*.lnk;*.bat;*.cmd)|*.exe;*.lnk;*.bat;*.cmd|All files (*.*)|*.*'
+        $launcherDialog.Multiselect = $false
+
+        if (-not [string]::IsNullOrWhiteSpace($launcherBox.Text)) {
+            try {
+                $existingDirectory = Split-Path -Parent $launcherBox.Text
+
+                if (Test-Path -LiteralPath $existingDirectory -PathType Container) {
+                    $launcherDialog.InitialDirectory = $existingDirectory
+                }
+            }
+            catch {
+            }
+        }
+
+        if ($launcherDialog.ShowDialog($dlg) -eq [System.Windows.Forms.DialogResult]::OK) {
+            $launcherBox.Text = $launcherDialog.FileName
+        }
+    })
+
     $okButton.Add_Click({
         if ($backupCheck.Checked -and [string]::IsNullOrWhiteSpace($folderBox.Text)) {
             Show-PutterError 'Backup folder cannot be empty while automatic backups are enabled.'
@@ -1288,7 +1535,11 @@ function Show-OptionsDialog {
         $Config.CreateBackups = $backupCheck.Checked
         $Config.BackupDirectory = $folderBox.Text
         $Config.RememberWindowGeometry = $rememberWindowCheck.Checked
+        $Config.NightMode = $nightModeCheck.Checked
+        $Config.PuttyLauncher = $launcherBox.Text.Trim()
+        $Config.LaunchDelayMilliseconds = [int]([decimal]$delayBox.Value * 1000)
         Save-PutterConfig
+        Apply-PutterMainTheme
 
         $dlg.DialogResult = [System.Windows.Forms.DialogResult]::OK
         $dlg.Close()
@@ -1305,11 +1556,18 @@ function Show-OptionsDialog {
     $dlg.Controls.Add($browseButton)
     $dlg.Controls.Add($openButton)
     $dlg.Controls.Add($rememberWindowCheck)
+    $dlg.Controls.Add($nightModeCheck)
+    $dlg.Controls.Add($launcherLabel)
+    $dlg.Controls.Add($launcherBox)
+    $dlg.Controls.Add($launcherBrowseButton)
+    $dlg.Controls.Add($delayLabel)
+    $dlg.Controls.Add($delayBox)
     $dlg.Controls.Add($okButton)
     $dlg.Controls.Add($cancelButton)
     $dlg.AcceptButton = $okButton
     $dlg.CancelButton = $cancelButton
 
+    Apply-PutterTheme -Control $dlg
     [void]$dlg.ShowDialog($form)
 }
 
@@ -1384,6 +1642,7 @@ function Show-AboutDialog {
     $dlg.Controls.Add($closeButton)
     $dlg.AcceptButton = $closeButton
 
+    Apply-PutterTheme -Control $dlg
     [void]$dlg.ShowDialog($form)
 }
 
@@ -1464,6 +1723,11 @@ $fileMenu.Add_DropDownOpening({
 
 $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
 
+$openSelectedItem = New-Object System.Windows.Forms.ToolStripMenuItem
+$openSelectedItem.Text = 'Open session'
+
+$openSeparator = New-Object System.Windows.Forms.ToolStripSeparator
+
 $multiEditItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $multiEditItem.Text = 'Multi-edit selected...'
 
@@ -1481,6 +1745,8 @@ $deleteCurrentItem.Text = 'Delete this session...'
 $deleteSelectedItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $deleteSelectedItem.Text = 'Delete selected...'
 
+[void]$contextMenu.Items.Add($openSelectedItem)
+[void]$contextMenu.Items.Add($openSeparator)
 [void]$contextMenu.Items.Add($multiEditItem)
 [void]$contextMenu.Items.Add($copySessionItem)
 [void]$contextMenu.Items.Add($exportSelectedItem)
@@ -1517,16 +1783,22 @@ $grid.Add_CellMouseDown({
 $contextMenu.Add_Opening({
     $count = $grid.SelectedRows.Count
 
+    $openSelectedItem.Text = if ($count -eq 1) { 'Open session' } else { "Open selected sessions ($count)" }
     $multiEditItem.Text = "Multi-edit selected ($count)..."
     $copySessionItem.Text = 'Copy session...'
     $exportSelectedItem.Text = "Export selected sessions ($count)..."
     $deleteSelectedItem.Text = "Delete selected ($count)..."
 
+    $openSelectedItem.Enabled = ($count -gt 0)
     $multiEditItem.Enabled = ($count -gt 0)
     $copySessionItem.Enabled = ($count -eq 1)
     $exportSelectedItem.Enabled = ($count -gt 0)
     $deleteSelectedItem.Enabled = ($count -gt 0)
     $deleteCurrentItem.Enabled = ($null -ne $script:ContextRow)
+})
+
+$openSelectedItem.Add_Click({
+    Start-PutterSessions
 })
 
 $deleteCurrentItem.Add_Click({
@@ -1554,6 +1826,10 @@ $copySessionItem.Add_Click({
 
 $exportSelectedItem.Add_Click({
     Export-SelectedSessions
+})
+
+$grid.add_SessionLaunchRequested({
+    Start-PutterSessions
 })
 
 # Delete deletes the selected session(s) when the grid is not in inline edit mode.
@@ -1589,6 +1865,7 @@ $form.Controls.Add($statusLabel)
 
 # Restore only after anchored controls exist, so they resize with the form immediately.
 Restore-PutterWindowGeometry -Form $form
+Apply-PutterMainTheme
 
 $form.Add_FormClosing({
     Save-PutterWindowGeometry -Form $form

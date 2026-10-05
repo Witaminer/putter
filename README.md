@@ -8,7 +8,7 @@ It reads PuTTY sessions directly from:
 
 ## Current version
 
-**0.9**
+**0.10**
 
 ## Features
 
@@ -74,3 +74,9 @@ The per-user configuration is stored in Putter.config.json next to the script an
 - Press **Delete** in the session grid to delete the selected session or sessions. The normal Delete key behavior is preserved while editing text inside a cell.
 - **Copy session...** in the right-click context menu duplicates one selected PuTTY session and asks for the new session name.
 - Putter can remember the main window position and size between runs. This is controlled by **Options -> Settings...** and is stored in the local `Putter.config.json` file.
+
+
+## Version 0.10
+
+- Window geometry is restored only after the anchored controls have been created, so the session grid starts at the correct size immediately.
+- Maximized window state is now remembered and restored in addition to the normal window position and size.

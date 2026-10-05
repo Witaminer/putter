@@ -8,7 +8,7 @@ It reads PuTTY sessions directly from:
 
 ## Current version
 
-**0.12**
+**0.13**
 
 ## Features
 
@@ -97,3 +97,9 @@ The per-user configuration is stored in Putter.config.json next to the script an
 - Added configurable grid font size and a Normal/Bold choice in **Options -> Settings...**.
 - Disabled manual row-height resizing in the session grid.
 - Added a compact **>** button column to launch an individual session directly.
+
+
+## Version 0.13
+
+- Night mode now uses a custom ToolStrip renderer so menu backgrounds, hover states, text, separators, and dropdowns are drawn with the dark palette instead of Windows light-menu colors.
+- User-resized grid column widths are now remembered between runs. Because the grid uses Fill mode, Putter stores each data column's FillWeight so the chosen proportions survive window resizing.

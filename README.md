@@ -8,7 +8,7 @@ It reads PuTTY sessions directly from:
 
 ## Current version
 
-**0.11**
+**0.12**
 
 ## Features
 
@@ -89,3 +89,11 @@ The per-user configuration is stored in Putter.config.json next to the script an
 - Added a configurable delay between launching multiple sessions.
 - Right-click the session grid and choose **Open session** or **Open selected sessions (N)**.
 - Press **Enter** outside inline editing to launch the selected session or sessions. Enter still commits an active cell edit.
+
+
+## Version 0.12
+
+- Fixed Night mode menu rendering with a dedicated dark ToolStrip renderer.
+- Added configurable grid font size and a Normal/Bold choice in **Options -> Settings...**.
+- Disabled manual row-height resizing in the session grid.
+- Added a compact **▶** button column to launch an individual session directly.

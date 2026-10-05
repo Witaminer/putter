@@ -2,7 +2,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 # ============================================================
-# Putter 0.13
+# Putter 0.14
 # A lightweight multi-session editor for PuTTY on Windows.
 # Find it on https://github.com/Witaminer/putter
 # ============================================================
@@ -192,7 +192,7 @@ public class PutterDarkRenderer : ToolStripProfessionalRenderer
 }
 '@ -ReferencedAssemblies 'System.Windows.Forms', 'System.Drawing' -WarningAction SilentlyContinue
 
-$PutterVersion   = '0.13'
+$PutterVersion   = '0.14'
 $PutterBuildDate = '2026.10.05'
 $RepositoryUrl   = 'https://github.com/Witaminer/putter'
 
@@ -214,6 +214,7 @@ $Config = [PSCustomObject]@{
     GridFontSize           = 9
     GridFontBold           = $false
     GridColumnFillWeights  = $null
+    GridSort               = ''
     PuttyLauncher          = ''
     LaunchDelayMilliseconds = 1000
 }
@@ -258,6 +259,10 @@ if (Test-Path -LiteralPath $ConfigPath) {
 
         if ($null -ne $loadedConfig.GridColumnFillWeights) {
             $Config.GridColumnFillWeights = $loadedConfig.GridColumnFillWeights
+        }
+
+        if ($null -ne $loadedConfig.GridSort) {
+            $Config.GridSort = [string]$loadedConfig.GridSort
         }
 
         if ($null -ne $loadedConfig.PuttyLauncher) {
@@ -534,22 +539,37 @@ function Restore-PutterColumnWidths {
         return
     }
 
-    foreach ($columnName in @('Session', 'HostName', 'PortNumber', 'UserName', 'PublicKeyFile')) {
-        if (-not $grid.Columns.Contains($columnName)) {
-            continue
+    $originalMode = $grid.AutoSizeColumnsMode
+
+    try {
+        $grid.SuspendLayout()
+
+        # Setting FillWeight one column at a time while Fill mode is active causes
+        # DataGridView to rebalance the other columns after every assignment.
+        # Temporarily disable Fill mode, apply all saved weights, then enable it again.
+        $grid.AutoSizeColumnsMode = [System.Windows.Forms.DataGridViewAutoSizeColumnsMode]::None
+
+        foreach ($columnName in @('Session', 'HostName', 'PortNumber', 'UserName', 'PublicKeyFile')) {
+            if (-not $grid.Columns.Contains($columnName)) {
+                continue
+            }
+
+            $property = $Config.GridColumnFillWeights.PSObject.Properties[$columnName]
+
+            if ($null -eq $property) {
+                continue
+            }
+
+            $fillWeight = [single]$property.Value
+
+            if ($fillWeight -gt 0) {
+                $grid.Columns[$columnName].FillWeight = $fillWeight
+            }
         }
-
-        $property = $Config.GridColumnFillWeights.PSObject.Properties[$columnName]
-
-        if ($null -eq $property) {
-            continue
-        }
-
-        $fillWeight = [single]$property.Value
-
-        if ($fillWeight -gt 0) {
-            $grid.Columns[$columnName].FillWeight = $fillWeight
-        }
+    }
+    finally {
+        $grid.AutoSizeColumnsMode = $originalMode
+        $grid.ResumeLayout()
     }
 }
 
@@ -566,6 +586,24 @@ function Save-PutterColumnWidths {
     }
 
     $Config.GridColumnFillWeights = $weights
+    Save-PutterConfig
+}
+
+function Restore-PutterSort {
+    if ([string]::IsNullOrWhiteSpace([string]$Config.GridSort)) {
+        return
+    }
+
+    try {
+        $view.Sort = [string]$Config.GridSort
+    }
+    catch {
+        # Ignore a stale sort expression if columns change in a future version.
+    }
+}
+
+function Save-PutterSort {
+    $Config.GridSort = [string]$view.Sort
     Save-PutterConfig
 }
 
@@ -2105,10 +2143,12 @@ $form.Controls.Add($statusLabel)
 # Restore only after anchored controls exist, so they resize with the form immediately.
 Restore-PutterWindowGeometry -Form $form
 Apply-PutterMainTheme
+Restore-PutterSort
 Restore-PutterColumnWidths
 
 $form.Add_FormClosing({
     Save-PutterColumnWidths
+    Save-PutterSort
     Save-PutterWindowGeometry -Form $form
 })
 

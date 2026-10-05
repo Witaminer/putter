@@ -54,7 +54,19 @@ pwsh.exe -NoProfile -ExecutionPolicy Bypass -File .\Putter.ps1
 
 Putter 0.19 has been tested with Windows PowerShell 5.1 and PowerShell 7.6.6 on Windows.
 
-No compilation or installer is required.
+No compilation or installer is required for the script version.
+
+## Distribution
+
+Putter is intentionally available in both source and ready-to-run forms.
+
+- `Putter.ps1` is the complete source. It remains available so the program is transparent, inspectable, editable, and easy to audit.
+- `Putter.bat` is the automatic launcher. It prefers PowerShell 7.x when `pwsh.exe` is available and falls back to Windows PowerShell 5.x.
+- `Putter5.bat` explicitly runs the source with Windows PowerShell 5.x.
+- `Putter7.bat` explicitly runs the source with PowerShell 7.x.
+- `Putter.exe` is the ready-to-run build generated from the same `Putter.ps1` source with PS2EXE.
+
+The EXE is provided for convenience, not to hide or replace the source. PS2EXE embeds the PowerShell script in a .NET executable and hosts the PowerShell engine through the .NET PowerShell API. The current PS2EXE build model targets PowerShell 5.1-compatible scripts and produces .NET Framework 4.x executables. It does not use the BAT launcher logic and does not automatically select PowerShell 7 when it is installed.
 
 ## Compatibility
 

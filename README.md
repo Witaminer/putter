@@ -30,17 +30,29 @@ It reads PuTTY sessions directly from:
 
 ## Running
 
-Run:
+Use the automatic launcher:
 
 ```bat
 Putter.bat
 ```
 
-or directly:
+`Putter.bat` prefers PowerShell 7.x when `pwsh.exe` is available and falls back to Windows PowerShell 5.x.
+
+To choose the PowerShell generation explicitly, use:
+
+```bat
+Putter5.bat
+Putter7.bat
+```
+
+Or run the script directly:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Putter.ps1
+pwsh.exe -NoProfile -ExecutionPolicy Bypass -File .\Putter.ps1
 ```
+
+Putter 0.18 has been tested with Windows PowerShell 5.1 and PowerShell 7.6.6 on Windows.
 
 No compilation or installer is required.
 

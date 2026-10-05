@@ -72,6 +72,8 @@ Putter is intentionally available in both source and ready-to-run forms.
 
 The EXE is provided for convenience, not to hide or replace the source. PS2EXE embeds the PowerShell script in a .NET executable and hosts the PowerShell engine through the .NET PowerShell API. The current PS2EXE build model targets PowerShell 5.1-compatible scripts and produces .NET Framework 4.x executables. It does not use the BAT launcher logic and does not automatically select PowerShell 7 when it is installed.
 
+**Important:** the current `Putter.exe` build is not digitally signed. Windows SmartScreen or other security software may therefore display a warning when the executable is downloaded or started. Users who prefer not to run an unsigned executable can use the fully available `Putter.ps1` source with one of the provided BAT launchers instead.
+
 ## Compatibility
 
 Putter requires Windows PowerShell 5.1 or a compatible PowerShell 7.x installation.
@@ -96,25 +98,6 @@ Putter has no telemetry, analytics, account system, background service, or remot
 Network activity can still occur as a direct result of user actions. For example, Putter can launch PuTTY sessions configured by the user, and clicking the repository link in **Help -> About Putter...** opens GitHub in the default browser. Those actions are explicit and are not background data collection by Putter.
 
 The complete PowerShell source is available in this repository so the program's behavior can be inspected directly.
-
-## Code signing policy
-
-For releases signed through the SignPath Foundation program:
-
-**Free code signing provided by SignPath.io, certificate by SignPath Foundation.**
-
-Project roles:
-
-- Committer and reviewer: [Witaminer](https://github.com/Witaminer)
-- Approver: [Witaminer](https://github.com/Witaminer)
-
-Only Putter artifacts built from this repository's source code are eligible for signing. Signing requests are approved manually by the project maintainer.
-
-Privacy policy for code signing purposes:
-
-> This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
-
-Putter does not collect telemetry, analytics, usage statistics, credentials, PuTTY session data, registry contents, or other user data. Network access occurs only as a direct result of user-requested actions, such as launching a configured PuTTY session or opening the project link in a web browser.
 
 ## Disclaimer
 

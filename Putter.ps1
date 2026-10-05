@@ -2,7 +2,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 # ============================================================
-# Putter 0.6
+# Putter 0.7
 # A lightweight multi-session editor for PuTTY on Windows.
 # Find it on https://github.com/Witaminer/putter
 # ============================================================
@@ -50,6 +50,22 @@ public class PutterDataGridView : DataGridView
             if (modifiers == Keys.Control && keyCode == Keys.A)
             {
                 textBox.SelectAll();
+                return true;
+            }
+
+            // Keep Home/End inside the editing control.
+            // DataGridView otherwise treats them as navigation keys and may end the edit.
+            if (modifiers == Keys.None && keyCode == Keys.Home)
+            {
+                textBox.SelectionStart = 0;
+                textBox.SelectionLength = 0;
+                return true;
+            }
+
+            if (modifiers == Keys.None && keyCode == Keys.End)
+            {
+                textBox.SelectionStart = textBox.TextLength;
+                textBox.SelectionLength = 0;
                 return true;
             }
 
@@ -123,7 +139,7 @@ function Show-PutterError {
 # ============================================================
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = 'Putter 0.6'
+$form.Text = 'Putter 0.7'
 $form.Width = 1250
 $form.Height = 750
 $form.StartPosition = 'CenterScreen'

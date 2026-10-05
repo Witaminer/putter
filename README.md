@@ -8,7 +8,7 @@ It reads PuTTY sessions directly from:
 
 ## Current version
 
-**0.18**
+**0.19**
 
 ## Features
 
@@ -52,7 +52,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Putter.ps1
 pwsh.exe -NoProfile -ExecutionPolicy Bypass -File .\Putter.ps1
 ```
 
-Putter 0.18 has been tested with Windows PowerShell 5.1 and PowerShell 7.6.6 on Windows.
+Putter 0.19 has been tested with Windows PowerShell 5.1 and PowerShell 7.6.6 on Windows.
 
 No compilation or installer is required.
 
@@ -163,3 +163,10 @@ The per-user configuration is stored in Putter.config.json next to the script an
 - Windows PowerShell 5.1 keeps the original .NET Framework references.
 - PowerShell 7+ resolves the loaded WinForms, Drawing, and ComponentModel assembly paths dynamically before compiling Putter's small C# helper classes.
 - No separate PS5/PS7 script is required.
+
+
+## Version 0.19
+
+- Added PS2EXE-aware base-directory detection. Putter now resolves its local working directory from `$PSScriptRoot`, then `$ScriptRoot`, and finally `[AppDomain]::CurrentDomain.BaseDirectory`.
+- `Putter.config.json` and the default `Backups` directory are now resolved relative to that detected Putter directory.
+- **Help -> About Putter...** now shows the PowerShell version and edition used to run Putter.

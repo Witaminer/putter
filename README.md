@@ -8,7 +8,7 @@ It reads PuTTY sessions directly from:
 
 ## Current version
 
-**0.16**
+**0.17**
 
 ## Features
 
@@ -122,3 +122,13 @@ The per-user configuration is stored in Putter.config.json next to the script an
 - Added a custom Putter application icon based on the mirrored-t monogram.
 - The ICO is embedded directly in Putter.ps1 as Base64, so no additional icon file is required.
 - The embedded icon contains 16x16, 32x32, and 48x48 sizes and keeps the PowerShell source ASCII-safe.
+
+
+## Version 0.17
+
+- Enabled native Windows visual styles for WinForms controls.
+- The per-row **Open** launcher now uses the native Windows button renderer.
+- Added a bottom action bar with **Refresh**, **Open**, **Rename**, **Copy**, and **Delete** buttons.
+- **Open** and **Delete** are enabled for one or more selected sessions.
+- **Rename** and **Copy** are enabled only when exactly one session is selected.
+- **Refresh** is always available and reloads the PuTTY session list.

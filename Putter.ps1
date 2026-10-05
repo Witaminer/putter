@@ -2,7 +2,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 # ============================================================
-# Putter 0.12
+# Putter 0.13
 # A lightweight multi-session editor for PuTTY on Windows.
 # Find it on https://github.com/Witaminer/putter
 # ============================================================
@@ -118,9 +118,81 @@ public class PutterDarkColorTable : ProfessionalColorTable
     public override System.Drawing.Color SeparatorDark { get { return border; } }
     public override System.Drawing.Color SeparatorLight { get { return border; } }
 }
+
+public class PutterDarkRenderer : ToolStripProfessionalRenderer
+{
+    private readonly System.Drawing.Color back = System.Drawing.Color.FromArgb(32, 32, 32);
+    private readonly System.Drawing.Color hover = System.Drawing.Color.FromArgb(62, 62, 66);
+    private readonly System.Drawing.Color border = System.Drawing.Color.FromArgb(85, 85, 90);
+    private readonly System.Drawing.Color fore = System.Drawing.Color.FromArgb(232, 232, 232);
+    private readonly System.Drawing.Color disabled = System.Drawing.Color.FromArgb(135, 135, 135);
+
+    public PutterDarkRenderer() : base(new PutterDarkColorTable())
+    {
+        this.RoundedEdges = false;
+    }
+
+    protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
+    {
+        using (System.Drawing.SolidBrush brush = new System.Drawing.SolidBrush(back))
+        {
+            e.Graphics.FillRectangle(brush, e.AffectedBounds);
+        }
+    }
+
+    protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+    {
+        System.Drawing.Rectangle bounds = new System.Drawing.Rectangle(System.Drawing.Point.Empty, e.Item.Size);
+        System.Drawing.Color color = (e.Item.Selected || e.Item.Pressed) ? hover : back;
+
+        using (System.Drawing.SolidBrush brush = new System.Drawing.SolidBrush(color))
+        {
+            e.Graphics.FillRectangle(brush, bounds);
+        }
+    }
+
+    protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
+    {
+        e.TextColor = e.Item.Enabled ? fore : disabled;
+        base.OnRenderItemText(e);
+    }
+
+    protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
+    {
+        int y = e.Item.Height / 2;
+
+        using (System.Drawing.Pen pen = new System.Drawing.Pen(border))
+        {
+            e.Graphics.DrawLine(pen, 4, y, e.Item.Width - 4, y);
+        }
+    }
+
+    protected override void OnRenderImageMargin(ToolStripRenderEventArgs e)
+    {
+        using (System.Drawing.SolidBrush brush = new System.Drawing.SolidBrush(back))
+        {
+            e.Graphics.FillRectangle(brush, e.AffectedBounds);
+        }
+    }
+
+    protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e)
+    {
+        using (System.Drawing.Pen pen = new System.Drawing.Pen(border))
+        {
+            System.Drawing.Rectangle rect = new System.Drawing.Rectangle(
+                0,
+                0,
+                e.ToolStrip.Width - 1,
+                e.ToolStrip.Height - 1
+            );
+
+            e.Graphics.DrawRectangle(pen, rect);
+        }
+    }
+}
 '@ -ReferencedAssemblies 'System.Windows.Forms', 'System.Drawing' -WarningAction SilentlyContinue
 
-$PutterVersion   = '0.12'
+$PutterVersion   = '0.13'
 $PutterBuildDate = '2026.10.05'
 $RepositoryUrl   = 'https://github.com/Witaminer/putter'
 
@@ -141,6 +213,7 @@ $Config = [PSCustomObject]@{
     NightMode              = $false
     GridFontSize           = 9
     GridFontBold           = $false
+    GridColumnFillWeights  = $null
     PuttyLauncher          = ''
     LaunchDelayMilliseconds = 1000
 }
@@ -181,6 +254,10 @@ if (Test-Path -LiteralPath $ConfigPath) {
 
         if ($null -ne $loadedConfig.GridFontBold) {
             $Config.GridFontBold = [bool]$loadedConfig.GridFontBold
+        }
+
+        if ($null -ne $loadedConfig.GridColumnFillWeights) {
+            $Config.GridColumnFillWeights = $loadedConfig.GridColumnFillWeights
         }
 
         if ($null -ne $loadedConfig.PuttyLauncher) {
@@ -452,6 +529,46 @@ function Apply-PutterGridFont {
     }
 }
 
+function Restore-PutterColumnWidths {
+    if ($null -eq $Config.GridColumnFillWeights) {
+        return
+    }
+
+    foreach ($columnName in @('Session', 'HostName', 'PortNumber', 'UserName', 'PublicKeyFile')) {
+        if (-not $grid.Columns.Contains($columnName)) {
+            continue
+        }
+
+        $property = $Config.GridColumnFillWeights.PSObject.Properties[$columnName]
+
+        if ($null -eq $property) {
+            continue
+        }
+
+        $fillWeight = [single]$property.Value
+
+        if ($fillWeight -gt 0) {
+            $grid.Columns[$columnName].FillWeight = $fillWeight
+        }
+    }
+}
+
+function Save-PutterColumnWidths {
+    $weights = [ordered]@{}
+
+    foreach ($columnName in @('Session', 'HostName', 'PortNumber', 'UserName', 'PublicKeyFile')) {
+        if ($grid.Columns.Contains($columnName)) {
+            $weights[$columnName] = [Math]::Round(
+                [double]$grid.Columns[$columnName].FillWeight,
+                3
+            )
+        }
+    }
+
+    $Config.GridColumnFillWeights = $weights
+    Save-PutterConfig
+}
+
 function Apply-PutterMainTheme {
     $theme = Get-PutterTheme
 
@@ -466,13 +583,13 @@ function Apply-PutterMainTheme {
     Apply-PutterThemeToToolStripItems -Items $contextMenu.Items -Theme $theme
 
     if ($Config.NightMode) {
-        $darkRenderer = New-Object System.Windows.Forms.ToolStripProfessionalRenderer (New-Object PutterDarkColorTable)
+        $darkRenderer = New-Object PutterDarkRenderer
         $menuStrip.Renderer = $darkRenderer
         $contextMenu.Renderer = $darkRenderer
     }
     else {
-        $menuStrip.RenderMode = [System.Windows.Forms.ToolStripRenderMode]::System
-        $contextMenu.RenderMode = [System.Windows.Forms.ToolStripRenderMode]::System
+        $menuStrip.Renderer = New-Object System.Windows.Forms.ToolStripSystemRenderer
+        $contextMenu.Renderer = New-Object System.Windows.Forms.ToolStripSystemRenderer
     }
 
     Apply-PutterGridFont
@@ -1988,8 +2105,10 @@ $form.Controls.Add($statusLabel)
 # Restore only after anchored controls exist, so they resize with the form immediately.
 Restore-PutterWindowGeometry -Form $form
 Apply-PutterMainTheme
+Restore-PutterColumnWidths
 
 $form.Add_FormClosing({
+    Save-PutterColumnWidths
     Save-PutterWindowGeometry -Form $form
 })
 

@@ -2,7 +2,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 # ============================================================
-# Putter 0.14
+# Putter 0.15
 # A lightweight multi-session editor for PuTTY on Windows.
 # Find it on https://github.com/Witaminer/putter
 # ============================================================
@@ -192,7 +192,7 @@ public class PutterDarkRenderer : ToolStripProfessionalRenderer
 }
 '@ -ReferencedAssemblies 'System.Windows.Forms', 'System.Drawing' -WarningAction SilentlyContinue
 
-$PutterVersion   = '0.14'
+$PutterVersion   = '0.15'
 $PutterBuildDate = '2026.10.05'
 $RepositoryUrl   = 'https://github.com/Witaminer/putter'
 
@@ -2144,7 +2144,12 @@ $form.Controls.Add($statusLabel)
 Restore-PutterWindowGeometry -Form $form
 Apply-PutterMainTheme
 Restore-PutterSort
-Restore-PutterColumnWidths
+
+$form.Add_Shown({
+    [void]$form.BeginInvoke([System.Action]{
+        Restore-PutterColumnWidths
+    })
+})
 
 $form.Add_FormClosing({
     Save-PutterColumnWidths

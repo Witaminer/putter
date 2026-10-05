@@ -1264,6 +1264,9 @@ $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
 $multiEditItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $multiEditItem.Text = 'Multi-edit selected...'
 
+$exportSelectedItem = New-Object System.Windows.Forms.ToolStripMenuItem
+$exportSelectedItem.Text = 'Export selected sessions...'
+
 $separator = New-Object System.Windows.Forms.ToolStripSeparator
 
 $deleteCurrentItem = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -1273,6 +1276,7 @@ $deleteSelectedItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $deleteSelectedItem.Text = 'Delete selected...'
 
 [void]$contextMenu.Items.Add($multiEditItem)
+[void]$contextMenu.Items.Add($exportSelectedItem)
 [void]$contextMenu.Items.Add($separator)
 [void]$contextMenu.Items.Add($deleteCurrentItem)
 [void]$contextMenu.Items.Add($deleteSelectedItem)
@@ -1307,9 +1311,11 @@ $contextMenu.Add_Opening({
     $count = $grid.SelectedRows.Count
 
     $multiEditItem.Text = "Multi-edit selected ($count)..."
+    $exportSelectedItem.Text = "Export selected sessions ($count)..."
     $deleteSelectedItem.Text = "Delete selected ($count)..."
 
     $multiEditItem.Enabled = ($count -gt 0)
+    $exportSelectedItem.Enabled = ($count -gt 0)
     $deleteSelectedItem.Enabled = ($count -gt 0)
     $deleteCurrentItem.Enabled = ($null -ne $script:ContextRow)
 })
@@ -1329,10 +1335,16 @@ $multiEditItem.Add_Click({
     Show-MultiEditDialog
 })
 
+$exportSelectedItem.Add_Click({
+    Export-SelectedSessions
+})
+
 # ============================================================
 # Run
 # ============================================================
 
+$form.MainMenuStrip = $menuStrip
+$form.Controls.Add($menuStrip)
 $form.Controls.Add($filterLabel)
 $form.Controls.Add($filterBox)
 $form.Controls.Add($grid)

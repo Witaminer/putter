@@ -3,7 +3,7 @@
 # Builds Putter.exe from Putter.ps1 using ps2exe.
 # ============================================================
 
-$RequiredPs2ExeVersion = '1.0.18'
+$PreferredPs2ExeVersion = '1.0.18'
 
 $source = Join-Path $PSScriptRoot 'Putter.ps1'
 $output = Join-Path $PSScriptRoot 'Putter.exe'
@@ -40,17 +40,14 @@ Write-Host 'Putter.ps1 found.' -ForegroundColor Green
 Write-Host
 Write-Host 'Checking for ps2exe...' -ForegroundColor Yellow
 
-$ps2exeModule = Get-Module ps2exe -ListAvailable |
-    Where-Object { $_.Version -eq [version]$RequiredPs2ExeVersion } |
-    Select-Object -First 1
+$ps2exeCommand = Get-Command Invoke-ps2exe -ErrorAction SilentlyContinue
 
-if ($null -eq $ps2exeModule) {
+if ($null -eq $ps2exeCommand) {
     Write-Host
-    Write-Host "ps2exe $RequiredPs2ExeVersion was not found." -ForegroundColor Yellow
-    Write-Host 'Putter releases are built using this specific version of ps2exe.'
+    Write-Host 'ps2exe was not found.' -ForegroundColor Yellow
     Write-Host
 
-    $answer = Read-Host "Install ps2exe $RequiredPs2ExeVersion from PowerShell Gallery? [Y/N]"
+    $answer = Read-Host "Install ps2exe $PreferredPs2ExeVersion from PowerShell Gallery? [Y/N]"
 
     if ($answer -notmatch '^[Yy]$') {
         Write-Host
@@ -60,11 +57,11 @@ if ($null -eq $ps2exeModule) {
     }
 
     Write-Host
-    Write-Host "Installing ps2exe $RequiredPs2ExeVersion..." -ForegroundColor Yellow
+    Write-Host "Installing ps2exe $PreferredPs2ExeVersion..." -ForegroundColor Yellow
 
     try {
         Install-Module ps2exe `
-            -RequiredVersion $RequiredPs2ExeVersion `
+            -RequiredVersion $PreferredPs2ExeVersion `
             -Scope CurrentUser `
             -Force `
             -ErrorAction Stop
@@ -79,18 +76,12 @@ if ($null -eq $ps2exeModule) {
 
     Write-Host 'ps2exe installed successfully.' -ForegroundColor Green
 }
-else {
-    Write-Host "Found ps2exe $($ps2exeModule.Version)." -ForegroundColor Green
-}
 
 Write-Host
 Write-Host 'Loading ps2exe...' -ForegroundColor Yellow
 
 try {
-    Import-Module ps2exe `
-        -RequiredVersion $RequiredPs2ExeVersion `
-        -Force `
-        -ErrorAction Stop
+    Import-Module ps2exe -Force -ErrorAction Stop
 }
 catch {
     Write-Host
@@ -100,7 +91,16 @@ catch {
     exit 1
 }
 
-Write-Host 'ps2exe loaded.' -ForegroundColor Green
+$ps2exeModule = Get-Module ps2exe |
+    Sort-Object Version -Descending |
+    Select-Object -First 1
+
+if ($null -ne $ps2exeModule) {
+    Write-Host "Found ps2exe $($ps2exeModule.Version)." -ForegroundColor Green
+}
+else {
+    Write-Host 'Found Invoke-ps2exe.' -ForegroundColor Green
+}
 
 if (Test-Path -LiteralPath $output -PathType Leaf) {
     Write-Host

@@ -81,7 +81,15 @@ The EXE is provided for convenience, not to hide or replace the source. PS2EXE e
 
 The ready-to-run `Putter.exe` release is built directly from the same `Putter.ps1` source using **ps2exe 1.0.18**.
 
-Build command:
+For convenience, the repository includes `Build.bat` and `Build.ps1` so the executable can be rebuilt locally without typing the full ps2exe command manually. `Build.bat` starts the builder with Windows PowerShell 5.1, while `Build.ps1` checks for `Putter.ps1`, verifies that ps2exe 1.0.18 is available, offers to install it from PowerShell Gallery when missing, asks before replacing an existing `Putter.exe`, and prints the resulting SHA-256 hash after a successful build.
+
+To build using the helper:
+
+```bat
+Build.bat
+```
+
+The underlying build command remains:
 
 ```powershell
 Invoke-ps2exe .\Putter.ps1 .\Putter.exe -noConsole

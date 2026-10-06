@@ -61,6 +61,19 @@ Putter 0.19 has been tested with Windows PowerShell 5.1 and PowerShell 7.6.6 on 
 
 No installer is required. The EXE is ready to run, while the script version requires a compatible PowerShell installation.
 
+### Windows security warnings for downloaded source files
+
+If you download the repository as a ZIP file, Windows may mark the archive as coming from the Internet. Files extracted from such an archive can retain this Mark-of-the-Web metadata and may trigger an "Open File - Security Warning" prompt when starting files such as `Putter.bat` or `Build.bat`.
+
+If you trust the downloaded archive, you can remove this metadata before extracting it by opening the ZIP file's **Properties** dialog and selecting **Unblock**. For files that have already been extracted, PowerShell can remove the mark with:
+
+```powershell
+Unblock-File .\Putter.bat
+Unblock-File .\Build.bat
+```
+
+This warning is a Windows security feature related to the file's download origin; it does not indicate that Putter detected a problem with the file.
+
 ## Distribution
 
 Putter is intentionally available in both source and ready-to-run forms.

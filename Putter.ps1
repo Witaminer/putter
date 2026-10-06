@@ -657,13 +657,14 @@ function Restore-PutterColumnOrder {
     )
 
     if ($savedOrder.Count -eq 0) {
-        return
+        $order = $columnNames
     }
-
-    $order = @(
-        $savedOrder
-        $columnNames | Where-Object { $_ -notin $savedOrder }
-    )
+    else {
+        $order = @(
+            $savedOrder
+            $columnNames | Where-Object { $_ -notin $savedOrder }
+        )
+    }
 
     try {
         if ($grid.Columns.Contains('Start')) {
@@ -851,13 +852,6 @@ $portColumn.DataType = [int]
 
 $view = New-Object System.Data.DataView($table)
 $grid.DataSource = $view
-
-$grid.Columns['Session'].HeaderText = 'Session'
-$grid.Columns['WinTitle'].HeaderText = 'Title'
-$grid.Columns['HostName'].HeaderText = 'Host'
-$grid.Columns['PortNumber'].HeaderText = 'Port'
-$grid.Columns['UserName'].HeaderText = 'Login'
-$grid.Columns['PublicKeyFile'].HeaderText = 'PublicKeyFile'
 
 $startColumn = New-Object System.Windows.Forms.DataGridViewButtonColumn
 $startColumn.Name = 'Start'
@@ -1055,6 +1049,21 @@ function Load-PuttySessions {
 $grid.Add_DataBindingComplete({
     if ($grid.Columns.Contains('RegistryName')) {
         $grid.Columns['RegistryName'].Visible = $false
+    }
+
+    $headers = [ordered]@{
+        Session       = 'Session'
+        WinTitle      = 'Title'
+        HostName      = 'Host'
+        PortNumber    = 'Port'
+        UserName      = 'Login'
+        PublicKeyFile = 'PublicKeyFile'
+    }
+
+    foreach ($columnName in $headers.Keys) {
+        if ($grid.Columns.Contains($columnName)) {
+            $grid.Columns[$columnName].HeaderText = $headers[$columnName]
+        }
     }
 })
 

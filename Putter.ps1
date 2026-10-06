@@ -23,7 +23,7 @@ else {
 }
 
 # ============================================================
-# Putter 0.19
+# Putter 0.20
 # A lightweight multi-session editor for PuTTY on Windows.
 # Find it on https://github.com/Witaminer/putter
 # ============================================================
@@ -213,8 +213,8 @@ public class PutterDarkRenderer : ToolStripProfessionalRenderer
 }
 '@ -ReferencedAssemblies $PutterCompilerReferences -WarningAction SilentlyContinue
 
-$PutterVersion   = '0.19'
-$PutterBuildDate = '2026.10.05'
+$PutterVersion   = '0.20'
+$PutterBuildDate = '2026.10.06'
 $RepositoryUrl   = 'https://github.com/Witaminer/putter'
 
 # Embedded application icon. The ICO contains 16x16, 32x32, and 48x48 images.
@@ -269,6 +269,7 @@ $Config = [PSCustomObject]@{
     GridFontSize           = 9
     GridFontBold           = $false
     GridColumnFillWeights  = $null
+    GridColumnOrder        = $null
     GridSort               = ''
     PuttyLauncher          = ''
     LaunchDelayMilliseconds = 1000
@@ -314,6 +315,10 @@ if (Test-Path -LiteralPath $ConfigPath) {
 
         if ($null -ne $loadedConfig.GridColumnFillWeights) {
             $Config.GridColumnFillWeights = $loadedConfig.GridColumnFillWeights
+        }
+
+        if ($null -ne $loadedConfig.GridColumnOrder) {
+            $Config.GridColumnOrder = @($loadedConfig.GridColumnOrder)
         }
 
         if ($null -ne $loadedConfig.GridSort) {
@@ -604,7 +609,7 @@ function Restore-PutterColumnWidths {
         # Temporarily disable Fill mode, apply all saved weights, then enable it again.
         $grid.AutoSizeColumnsMode = [System.Windows.Forms.DataGridViewAutoSizeColumnsMode]::None
 
-        foreach ($columnName in @('Session', 'HostName', 'PortNumber', 'UserName', 'PublicKeyFile')) {
+        foreach ($columnName in @('Session', 'WinTitle', 'HostName', 'PortNumber', 'UserName', 'PublicKeyFile')) {
             if (-not $grid.Columns.Contains($columnName)) {
                 continue
             }
@@ -631,7 +636,7 @@ function Restore-PutterColumnWidths {
 function Save-PutterColumnWidths {
     $weights = [ordered]@{}
 
-    foreach ($columnName in @('Session', 'HostName', 'PortNumber', 'UserName', 'PublicKeyFile')) {
+    foreach ($columnName in @('Session', 'WinTitle', 'HostName', 'PortNumber', 'UserName', 'PublicKeyFile')) {
         if ($grid.Columns.Contains($columnName)) {
             $weights[$columnName] = [Math]::Round(
                 [double]$grid.Columns[$columnName].FillWeight,
@@ -641,6 +646,54 @@ function Save-PutterColumnWidths {
     }
 
     $Config.GridColumnFillWeights = $weights
+    Save-PutterConfig
+}
+
+function Restore-PutterColumnOrder {
+    $columnNames = @('Session', 'WinTitle', 'HostName', 'PortNumber', 'UserName', 'PublicKeyFile')
+    $savedOrder = @(
+        $Config.GridColumnOrder |
+            Where-Object { $_ -in $columnNames }
+    )
+
+    if ($savedOrder.Count -eq 0) {
+        return
+    }
+
+    $order = @(
+        $savedOrder
+        $columnNames | Where-Object { $_ -notin $savedOrder }
+    )
+
+    try {
+        if ($grid.Columns.Contains('Start')) {
+            $grid.Columns['Start'].DisplayIndex = 0
+        }
+
+        $displayIndex = 1
+
+        foreach ($columnName in $order) {
+            if ($grid.Columns.Contains($columnName)) {
+                $grid.Columns[$columnName].DisplayIndex = $displayIndex
+                $displayIndex++
+            }
+        }
+    }
+    catch {
+        # Ignore stale or invalid column-order settings.
+    }
+}
+
+function Save-PutterColumnOrder {
+    $columnNames = @('Session', 'WinTitle', 'HostName', 'PortNumber', 'UserName', 'PublicKeyFile')
+
+    $Config.GridColumnOrder = @(
+        $grid.Columns |
+            Where-Object { $_.Name -in $columnNames } |
+            Sort-Object DisplayIndex |
+            ForEach-Object { $_.Name }
+    )
+
     Save-PutterConfig
 }
 
@@ -784,6 +837,7 @@ $statusLabel.Anchor = 'Bottom,Left,Right'
 
 $table = New-Object System.Data.DataTable
 [void]$table.Columns.Add('Session')
+[void]$table.Columns.Add('WinTitle')
 [void]$table.Columns.Add('HostName')
 
 $portColumn = New-Object System.Data.DataColumn
@@ -797,6 +851,13 @@ $portColumn.DataType = [int]
 
 $view = New-Object System.Data.DataView($table)
 $grid.DataSource = $view
+
+$grid.Columns['Session'].HeaderText = 'Session'
+$grid.Columns['WinTitle'].HeaderText = 'Title'
+$grid.Columns['HostName'].HeaderText = 'Host'
+$grid.Columns['PortNumber'].HeaderText = 'Port'
+$grid.Columns['UserName'].HeaderText = 'Login'
+$grid.Columns['PublicKeyFile'].HeaderText = 'PublicKeyFile'
 
 $startColumn = New-Object System.Windows.Forms.DataGridViewButtonColumn
 $startColumn.Name = 'Start'
@@ -821,7 +882,139 @@ function Update-Status {
     }
 }
 
+function Get-PutterGridViewState {
+    $selectedRegistryNames = @(
+        $grid.SelectedRows |
+            ForEach-Object { [string]$_.Cells['RegistryName'].Value }
+    )
+
+    $currentRegistryName = $null
+    $currentColumnName = $null
+    $currentRowIndex = -1
+
+    if ($null -ne $grid.CurrentRow) {
+        $currentRegistryName = [string]$grid.CurrentRow.Cells['RegistryName'].Value
+        $currentRowIndex = $grid.CurrentRow.Index
+    }
+
+    if ($null -ne $grid.CurrentCell) {
+        $currentColumnName = $grid.Columns[$grid.CurrentCell.ColumnIndex].Name
+    }
+
+    $firstDisplayedIndex = -1
+    $firstDisplayedRegistryName = $null
+
+    try {
+        $firstDisplayedIndex = $grid.FirstDisplayedScrollingRowIndex
+
+        if ($firstDisplayedIndex -ge 0 -and $firstDisplayedIndex -lt $grid.Rows.Count) {
+            $firstDisplayedRegistryName = [string]$grid.Rows[$firstDisplayedIndex].Cells['RegistryName'].Value
+        }
+    }
+    catch {
+    }
+
+    return [PSCustomObject]@{
+        SelectedRegistryNames       = $selectedRegistryNames
+        CurrentRegistryName         = $currentRegistryName
+        CurrentColumnName           = $currentColumnName
+        CurrentRowIndex             = $currentRowIndex
+        FirstDisplayedRegistryName  = $firstDisplayedRegistryName
+        FirstDisplayedIndex         = $firstDisplayedIndex
+    }
+}
+
+function Restore-PutterGridViewState {
+    param($State)
+
+    if ($null -eq $State -or $grid.Rows.Count -eq 0) {
+        return
+    }
+
+    $rowsByRegistry = @{}
+
+    foreach ($row in $grid.Rows) {
+        $registryName = [string]$row.Cells['RegistryName'].Value
+
+        if (-not [string]::IsNullOrEmpty($registryName)) {
+            $rowsByRegistry[$registryName] = $row
+        }
+    }
+
+    $currentRow = $null
+
+    if (-not [string]::IsNullOrEmpty([string]$State.CurrentRegistryName) -and
+        $rowsByRegistry.ContainsKey([string]$State.CurrentRegistryName)) {
+        $currentRow = $rowsByRegistry[[string]$State.CurrentRegistryName]
+    }
+
+    if ($null -ne $currentRow) {
+        $columnName = [string]$State.CurrentColumnName
+
+        if ([string]::IsNullOrEmpty($columnName) -or
+            -not $grid.Columns.Contains($columnName) -or
+            -not $grid.Columns[$columnName].Visible) {
+            $columnName = 'Session'
+        }
+
+        try {
+            $grid.CurrentCell = $currentRow.Cells[$columnName]
+        }
+        catch {
+        }
+    }
+
+    $grid.ClearSelection()
+    $restoredSelection = $false
+
+    foreach ($registryName in @($State.SelectedRegistryNames)) {
+        if ($rowsByRegistry.ContainsKey([string]$registryName)) {
+            $rowsByRegistry[[string]$registryName].Selected = $true
+            $restoredSelection = $true
+        }
+    }
+
+    if (-not $restoredSelection -and @($State.SelectedRegistryNames).Count -gt 0) {
+        $fallbackIndex = [Math]::Min(
+            [Math]::Max(0, [int]$State.CurrentRowIndex),
+            $grid.Rows.Count - 1
+        )
+        $fallbackRow = $grid.Rows[$fallbackIndex]
+        $fallbackRow.Selected = $true
+
+        try {
+            $grid.CurrentCell = $fallbackRow.Cells['Session']
+        }
+        catch {
+        }
+    }
+
+    $firstDisplayedRow = $null
+
+    if (-not [string]::IsNullOrEmpty([string]$State.FirstDisplayedRegistryName) -and
+        $rowsByRegistry.ContainsKey([string]$State.FirstDisplayedRegistryName)) {
+        $firstDisplayedRow = $rowsByRegistry[[string]$State.FirstDisplayedRegistryName]
+    }
+
+    $firstDisplayedIndex = if ($null -ne $firstDisplayedRow) {
+        $firstDisplayedRow.Index
+    }
+    else {
+        [Math]::Min(
+            [Math]::Max(0, [int]$State.FirstDisplayedIndex),
+            $grid.Rows.Count - 1
+        )
+    }
+
+    try {
+        $grid.FirstDisplayedScrollingRowIndex = $firstDisplayedIndex
+    }
+    catch {
+    }
+}
+
 function Load-PuttySessions {
+    $gridState = Get-PutterGridViewState
     $table.Clear()
 
     if (-not (Test-Path -LiteralPath $SessionsPathPS)) {
@@ -835,6 +1028,7 @@ function Load-PuttySessions {
 
         $row.Session = ConvertFrom-PuttySessionName $sessionKey.PSChildName
         $row.RegistryName = $sessionKey.PSChildName
+        $row.WinTitle = [string]$p.WinTitle
         $row.HostName = [string]$p.HostName
 
         if ($null -ne $p.PortNumber) {
@@ -850,6 +1044,7 @@ function Load-PuttySessions {
         $table.Rows.Add($row)
     }
 
+    Restore-PutterGridViewState -State $gridState
     Update-Status
 }
 
@@ -874,6 +1069,7 @@ $filterBox.Add_TextChanged({
     else {
         $view.RowFilter =
             "Session LIKE '%$text%' OR " +
+            "WinTitle LIKE '%$text%' OR " +
             "HostName LIKE '%$text%' OR " +
             "UserName LIKE '%$text%' OR " +
             "PublicKeyFile LIKE '%$text%'"
@@ -1004,7 +1200,7 @@ $grid.Add_CellEndEdit({
 
             Set-ItemProperty -LiteralPath $registryPath -Name 'PortNumber' -Value $port -ErrorAction Stop
         }
-        elseif ($columnName -in @('HostName', 'UserName', 'PublicKeyFile')) {
+        elseif ($columnName -in @('WinTitle', 'HostName', 'UserName', 'PublicKeyFile')) {
             Set-ItemProperty -LiteralPath $registryPath -Name $columnName -Value ([string]$newValue) -ErrorAction Stop
         }
         else {
@@ -1204,7 +1400,7 @@ function Show-MultiEditDialog {
     $dlg = New-Object System.Windows.Forms.Form
     $dlg.Text = "Putter - Multi-edit ($($selectedRows.Count) sessions)"
     $dlg.Width = 680
-    $dlg.Height = 440
+    $dlg.Height = 475
     $dlg.StartPosition = 'CenterParent'
     $dlg.FormBorderStyle = 'FixedDialog'
     $dlg.MaximizeBox = $false
@@ -1257,26 +1453,27 @@ function Show-MultiEditDialog {
         }
     }
 
-    $hostEdit = Add-EditLine 'HostName' 65
-    $portEdit = Add-EditLine 'PortNumber' 100
-    $userEdit = Add-EditLine 'UserName' 135
-    $keyEdit = Add-EditLine 'PublicKeyFile' 170
+    $titleEdit = Add-EditLine 'Title' 65
+    $hostEdit = Add-EditLine 'Host' 100
+    $portEdit = Add-EditLine 'Port' 135
+    $userEdit = Add-EditLine 'Login' 170
+    $keyEdit = Add-EditLine 'PublicKeyFile' 205
 
     $sessionCheck = New-Object System.Windows.Forms.CheckBox
     $sessionCheck.Text = 'Session name'
     $sessionCheck.Left = 15
-    $sessionCheck.Top = 215
+    $sessionCheck.Top = 250
     $sessionCheck.Width = 130
 
     $findLabel = New-Object System.Windows.Forms.Label
     $findLabel.Text = 'Find:'
     $findLabel.Left = 155
-    $findLabel.Top = 216
+    $findLabel.Top = 251
     $findLabel.AutoSize = $true
 
     $findBox = New-Object System.Windows.Forms.TextBox
     $findBox.Left = 200
-    $findBox.Top = 212
+    $findBox.Top = 247
     $findBox.Width = 180
     $findBox.Enabled = $false
     $findBox.ShortcutsEnabled = $true
@@ -1284,12 +1481,12 @@ function Show-MultiEditDialog {
     $replaceLabel = New-Object System.Windows.Forms.Label
     $replaceLabel.Text = 'Replace:'
     $replaceLabel.Left = 390
-    $replaceLabel.Top = 216
+    $replaceLabel.Top = 251
     $replaceLabel.AutoSize = $true
 
     $replaceBox = New-Object System.Windows.Forms.TextBox
     $replaceBox.Left = 455
-    $replaceBox.Top = 212
+    $replaceBox.Top = 247
     $replaceBox.Width = 175
     $replaceBox.Enabled = $false
     $replaceBox.ShortcutsEnabled = $true
@@ -1317,7 +1514,7 @@ function Show-MultiEditDialog {
 
     $hint = New-Object System.Windows.Forms.Label
     $hint.Left = 155
-    $hint.Top = 245
+    $hint.Top = 280
     $hint.Width = 475
     $hint.Height = 35
     $hint.Text = 'Session name uses Find/Replace so each session keeps a unique name.'
@@ -1326,13 +1523,13 @@ function Show-MultiEditDialog {
     $applyButton = New-Object System.Windows.Forms.Button
     $applyButton.Text = 'Apply'
     $applyButton.Left = 450
-    $applyButton.Top = 325
+    $applyButton.Top = 360
     $applyButton.Width = 85
 
     $cancelButton = New-Object System.Windows.Forms.Button
     $cancelButton.Text = 'Cancel'
     $cancelButton.Left = 545
-    $cancelButton.Top = 325
+    $cancelButton.Top = 360
     $cancelButton.Width = 85
 
     $cancelButton.Add_Click({
@@ -1341,6 +1538,7 @@ function Show-MultiEditDialog {
 
     $applyButton.Add_Click({
         $anything =
+            $titleEdit.Check.Checked -or
             $hostEdit.Check.Checked -or
             $portEdit.Check.Checked -or
             $userEdit.Check.Checked -or
@@ -1363,12 +1561,12 @@ function Show-MultiEditDialog {
             $parsedPort = 0
 
             if (-not [int]::TryParse($portEdit.Text.Text, [ref]$parsedPort)) {
-                Show-PutterError 'PortNumber must be a number.'
+                Show-PutterError 'Port must be a number.'
                 return
             }
 
             if ($parsedPort -lt 1 -or $parsedPort -gt 65535) {
-                Show-PutterError 'PortNumber must be in the range 1-65535.'
+                Show-PutterError 'Port must be in the range 1-65535.'
                 return
             }
 
@@ -1426,16 +1624,20 @@ function Show-MultiEditDialog {
 
         $changes = @()
 
+        if ($titleEdit.Check.Checked) {
+            $changes += "Title = $($titleEdit.Text.Text)"
+        }
+
         if ($hostEdit.Check.Checked) {
-            $changes += "HostName = $($hostEdit.Text.Text)"
+            $changes += "Host = $($hostEdit.Text.Text)"
         }
 
         if ($portEdit.Check.Checked) {
-            $changes += "PortNumber = $port"
+            $changes += "Port = $port"
         }
 
         if ($userEdit.Check.Checked) {
-            $changes += "UserName = $($userEdit.Text.Text)"
+            $changes += "Login = $($userEdit.Text.Text)"
         }
 
         if ($keyEdit.Check.Checked) {
@@ -1468,6 +1670,10 @@ function Show-MultiEditDialog {
             foreach ($row in $selectedRows) {
                 $registryName = [string]$row.Cells['RegistryName'].Value
                 $registryPath = Join-Path $SessionsPathPS $registryName
+
+                if ($titleEdit.Check.Checked) {
+                    Set-ItemProperty -LiteralPath $registryPath -Name 'WinTitle' -Value $titleEdit.Text.Text -ErrorAction Stop
+                }
 
                 if ($hostEdit.Check.Checked) {
                     Set-ItemProperty -LiteralPath $registryPath -Name 'HostName' -Value $hostEdit.Text.Text -ErrorAction Stop
@@ -2121,19 +2327,15 @@ $settingsItem.Add_Click({
 })
 [void]$optionsMenu.DropDownItems.Add($settingsItem)
 
-$helpMenu = New-Object System.Windows.Forms.ToolStripMenuItem
-$helpMenu.Text = 'Help'
-
-$aboutItem = New-Object System.Windows.Forms.ToolStripMenuItem
-$aboutItem.Text = 'About Putter...'
-$aboutItem.Add_Click({
+$aboutMenu = New-Object System.Windows.Forms.ToolStripMenuItem
+$aboutMenu.Text = 'About'
+$aboutMenu.Add_Click({
     Show-AboutDialog
 })
-[void]$helpMenu.DropDownItems.Add($aboutItem)
 
 [void]$menuStrip.Items.Add($fileMenu)
 [void]$menuStrip.Items.Add($optionsMenu)
-[void]$menuStrip.Items.Add($helpMenu)
+[void]$menuStrip.Items.Add($aboutMenu)
 
 $fileMenu.Add_DropDownOpening({
     $exportSelectedFileItem.Enabled = ($grid.SelectedRows.Count -gt 0)
@@ -2298,12 +2500,14 @@ Restore-PutterSort
 
 $form.Add_Shown({
     [void]$form.BeginInvoke([System.Action]{
+        Restore-PutterColumnOrder
         Restore-PutterColumnWidths
     })
 })
 
 $form.Add_FormClosing({
     Save-PutterColumnWidths
+    Save-PutterColumnOrder
     Save-PutterSort
     Save-PutterWindowGeometry -Form $form
 })

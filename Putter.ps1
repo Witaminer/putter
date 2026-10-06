@@ -883,6 +883,10 @@ function Update-Status {
 }
 
 function Get-PutterGridViewState {
+    if ($grid.Rows.Count -eq 0) {
+        return $null
+    }
+
     $selectedRegistryNames = @(
         $grid.SelectedRows |
             ForEach-Object { [string]$_.Cells['RegistryName'].Value }

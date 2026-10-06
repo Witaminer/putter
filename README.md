@@ -8,12 +8,14 @@ It reads PuTTY sessions directly from:
 
 ## Current version
 
-**0.19**
+**0.20**
 
 ## Features
 
 - Browse saved PuTTY sessions in a sortable table
-- Filter sessions by name, host, user, or key file
+- Filter sessions by name, window title, host, login, or key file
+- Edit PuTTY window titles (`WinTitle`) directly in the grid
+- Drag data columns into a preferred order; the order is remembered in `Putter.config.json`
 - Multi-select rows with Ctrl/Shift
 - Double-click a cell to edit it
 - Press Enter to save an inline edit
@@ -27,6 +29,7 @@ It reads PuTTY sessions directly from:
 - Multi-edit selected sessions
 - Find/Replace for bulk session-name changes
 - Automatic `.reg` backup before registry modifications
+- Preserve the grid position and selection when session data is reloaded where possible
 
 ## Running
 
@@ -111,7 +114,7 @@ Putter is designed as a local Windows utility. It does not upload, synchronize, 
 
 Putter has no telemetry, analytics, account system, background service, or remote database. Its own configuration and automatic backups are stored locally on the computer.
 
-Network activity can still occur as a direct result of user actions. For example, Putter can launch PuTTY sessions configured by the user, and clicking the repository link in **Help -> About Putter...** opens GitHub in the default browser. Those actions are explicit and are not background data collection by Putter.
+Network activity can still occur as a direct result of user actions. For example, Putter can launch PuTTY sessions configured by the user, and clicking the repository link in **About** opens GitHub in the default browser. Those actions are explicit and are not background data collection by Putter.
 
 The complete PowerShell source is available in this repository so the program's behavior can be inspected directly.
 
@@ -222,3 +225,13 @@ The per-user configuration is stored in Putter.config.json next to the script an
 - Added PS2EXE-aware base-directory detection. Putter now resolves its local working directory from `$PSScriptRoot`, then `$ScriptRoot`, and finally `[AppDomain]::CurrentDomain.BaseDirectory`.
 - `Putter.config.json` and the default `Backups` directory are now resolved relative to that detected Putter directory.
 - **Help -> About Putter...** now shows the PowerShell version and edition used to run Putter.
+
+
+## Version 0.20
+
+- Added the PuTTY window title (`WinTitle`) to the session grid as **Title**.
+- Simplified grid headers to **Session**, **Title**, **Host**, **Port**, **Login**, and **PublicKeyFile**.
+- Added **Title** to multi-edit and to the session filter.
+- Grid columns can be reordered by dragging their headers, and the data-column order is now stored in `Putter.config.json`.
+- Refresh and other full session-list reloads now preserve the visible grid position and selection where possible instead of jumping to the top.
+- Replaced the single-item **Help -> About Putter...** menu with a direct **About** menu item.

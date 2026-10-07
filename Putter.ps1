@@ -2627,24 +2627,16 @@ function Refresh-PutterTraySessionList {
 $trayMenu = New-Object System.Windows.Forms.ContextMenuStrip
 $trayMenu.ShowImageMargin = $false
 
-$trayAboutItem = New-Object System.Windows.Forms.ToolStripMenuItem
-$trayAboutItem.Text = 'About'
-$trayAboutItem.Add_Click({
-    Show-AboutDialog -FromTray
-})
-
-$traySeparatorTop = New-Object System.Windows.Forms.ToolStripSeparator
-
 $traySessionList = New-Object System.Windows.Forms.ListBox
-$traySessionList.Width = 360
-$traySessionList.Height = 360
+$traySessionList.Width = 300
+$traySessionList.Height = 260
 $traySessionList.IntegralHeight = $false
 $traySessionList.SelectionMode = [System.Windows.Forms.SelectionMode]::One
-$traySessionList.HorizontalScrollbar = $true
+$traySessionList.HorizontalScrollbar = $false
 
 $traySessionHost = New-Object System.Windows.Forms.ToolStripControlHost($traySessionList)
 $traySessionHost.AutoSize = $false
-$traySessionHost.Size = New-Object System.Drawing.Size(360, 360)
+$traySessionHost.Size = New-Object System.Drawing.Size(300, 260)
 $traySessionHost.Margin = New-Object System.Windows.Forms.Padding(2)
 
 $traySessionList.Add_MouseUp({
@@ -2686,9 +2678,15 @@ $traySessionList.Add_KeyDown({
 
 $traySeparatorBottom = New-Object System.Windows.Forms.ToolStripSeparator
 
-$trayShowItem = New-Object System.Windows.Forms.ToolStripMenuItem
-$trayShowItem.Text = 'Show Putter'
-$trayShowItem.Add_Click({
+$trayAboutItem = New-Object System.Windows.Forms.ToolStripMenuItem
+$trayAboutItem.Text = 'About'
+$trayAboutItem.Add_Click({
+    Show-AboutDialog -FromTray
+})
+
+$trayReopenItem = New-Object System.Windows.Forms.ToolStripMenuItem
+$trayReopenItem.Text = 'Reopen'
+$trayReopenItem.Add_Click({
     Show-PutterMainWindow
 })
 
@@ -2699,11 +2697,10 @@ $trayExitItem.Add_Click({
     $form.Close()
 })
 
-[void]$trayMenu.Items.Add($trayAboutItem)
-[void]$trayMenu.Items.Add($traySeparatorTop)
 [void]$trayMenu.Items.Add($traySessionHost)
 [void]$trayMenu.Items.Add($traySeparatorBottom)
-[void]$trayMenu.Items.Add($trayShowItem)
+[void]$trayMenu.Items.Add($trayAboutItem)
+[void]$trayMenu.Items.Add($trayReopenItem)
 [void]$trayMenu.Items.Add($trayExitItem)
 
 $trayMenu.Add_Opening({

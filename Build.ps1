@@ -47,7 +47,22 @@ if ($null -eq $ps2exeCommand) {
 
     $answer = Read-Host 'Install the latest ps2exe from PowerShell Gallery? [Y/N]'
 
-    if ($answer -notmatch '^[Yy]
+    if ($answer -notmatch '^[Yy]$') {
+        Write-Host
+        Write-Host 'Build cancelled.' -ForegroundColor Yellow
+        Write-Host
+        exit 1
+    }
+
+    Write-Host
+    Write-Host 'Installing the latest ps2exe...' -ForegroundColor Yellow
+
+    try {
+        Install-Module ps2exe `
+            -Scope CurrentUser `
+            -Force `
+            -ErrorAction Stop
+    }
     catch {
         Write-Host
         Write-Host 'ERROR: ps2exe installation failed.' -ForegroundColor Red

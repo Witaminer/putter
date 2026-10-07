@@ -268,7 +268,7 @@ function Normalize-PutterFilterHistory {
     foreach ($item in @($Items)) {
         $text = [string]$item
 
-        if ([string]::IsNullOrWhiteSpace($text)) {
+        if ([string]::IsNullOrWhiteSpace($text) -or $text.Length -lt 2) {
             continue
         }
 
@@ -811,6 +811,9 @@ $filterBox.Width = 420
 $filterBox.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDown
 $filterBox.MaxDropDownItems = 22
 
+$filterHistoryTimer = New-Object System.Windows.Forms.Timer
+$filterHistoryTimer.Interval = 2000
+
 $clearFilterButton = New-Object System.Windows.Forms.Button
 $clearFilterButton.Text = 'Clear'
 $clearFilterButton.Left = 490
@@ -853,7 +856,10 @@ function Refresh-PutterFilterHistoryItems {
 function Add-PutterFilterHistoryEntry {
     param([string]$Text)
 
-    if ([string]::IsNullOrWhiteSpace($Text)) {
+    if ([string]::IsNullOrWhiteSpace($Text) -or
+        $Text.Length -lt 2 -or
+        $null -eq $view -or
+        $view.Count -eq 0) {
         return
     }
 
@@ -1196,7 +1202,14 @@ Load-PuttySessions
 
 Refresh-PutterFilterHistoryItems
 
+$filterHistoryTimer.Add_Tick({
+    $filterHistoryTimer.Stop()
+    Add-PutterFilterHistoryEntry -Text $filterBox.Text
+})
+
 $filterBox.Add_TextChanged({
+    $filterHistoryTimer.Stop()
+
     if ($script:UpdatingFilterHistory) {
         return
     }
@@ -1218,6 +1231,12 @@ $filterBox.Add_TextChanged({
             "HostName LIKE '%$text%' OR " +
             "UserName LIKE '%$text%' OR " +
             "PublicKeyFile LIKE '%$text%'"
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($filterBox.Text) -and
+        $filterBox.Text.Length -ge 2 -and
+        $view.Count -gt 0) {
+        $filterHistoryTimer.Start()
     }
 })
 
@@ -1271,6 +1290,7 @@ $filterBox.Add_KeyDown({
     param($sender, $e)
 
     if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
+        $filterHistoryTimer.Stop()
         Add-PutterFilterHistoryEntry -Text $filterBox.Text
         $e.Handled = $true
         $e.SuppressKeyPress = $true
@@ -1278,10 +1298,12 @@ $filterBox.Add_KeyDown({
 })
 
 $filterBox.Add_Leave({
+    $filterHistoryTimer.Stop()
     Add-PutterFilterHistoryEntry -Text $filterBox.Text
 })
 
 $clearFilterButton.Add_Click({
+    $filterHistoryTimer.Stop()
     Add-PutterFilterHistoryEntry -Text $filterBox.Text
     $filterBox.Text = ''
     $filterBox.Focus()
@@ -2718,6 +2740,7 @@ $form.Add_Shown({
 })
 
 $form.Add_FormClosing({
+    $filterHistoryTimer.Stop()
     Add-PutterFilterHistoryEntry -Text $filterBox.Text
     Save-PutterColumnWidths
     Save-PutterColumnOrder

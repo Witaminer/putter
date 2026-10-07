@@ -59,7 +59,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Putter.ps1
 pwsh.exe -NoProfile -ExecutionPolicy Bypass -File .\Putter.ps1
 ```
 
-Putter 0.19 has been tested with Windows PowerShell 5.1 and PowerShell 7.6.6 on Windows.
+Putter has been tested with Windows PowerShell 5.1 and PowerShell 7.6.6 on Windows.
 
 No installer is required. The EXE is ready to run, while the script version requires a compatible PowerShell installation.
 
@@ -164,7 +164,7 @@ While editing a cell, `Home` and `End` move the caret to the beginning or end of
 - **File -> Export selected sessions...** exports only the selected PuTTY session keys into a Regedit-compatible .reg file.
 - **File -> Import .reg...** validates that every registry section is inside the PuTTY Sessions tree before importing.
 - **Settings** controls automatic backups and the backup folder.
-- **Help -> About Putter...** shows the version, build date in YYYY.MM.DD format, GPL license, backup status, backup folder, and a clickable GitHub link.
+- **About** shows the version, build date in YYYY.MM.DD format, GPL license, backup status, backup folder, and a clickable GitHub link.
 - **Export selected sessions...** is also available from the grid context menu.
 
 The per-user configuration is stored in Putter.config.json next to the script and is intentionally ignored by Git.
@@ -174,7 +174,7 @@ The per-user configuration is stored in Putter.config.json next to the script an
 
 - Press **Delete** in the session grid to delete the selected session or sessions. The normal Delete key behavior is preserved while editing text inside a cell.
 - **Copy session...** in the right-click context menu duplicates one selected PuTTY session and asks for the new session name.
-- Putter can remember the main window position and size between runs. This is controlled by **Options -> Settings...** and is stored in the local `Putter.config.json` file.
+- Putter can remember the main window position and size between runs. This is controlled by **Settings** and is stored in the local `Putter.config.json` file.
 
 
 ## Version 0.10
@@ -247,7 +247,7 @@ The per-user configuration is stored in Putter.config.json next to the script an
 
 - Added PS2EXE-aware base-directory detection. Putter now resolves its local working directory from `$PSScriptRoot`, then `$ScriptRoot`, and finally `[AppDomain]::CurrentDomain.BaseDirectory`.
 - `Putter.config.json` and the default `Backups` directory are now resolved relative to that detected Putter directory.
-- **Help -> About Putter...** now shows the PowerShell version and edition used to run Putter.
+- **About** now shows the PowerShell version and edition used to run Putter.
 
 
 ## Version 0.20

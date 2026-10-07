@@ -2509,7 +2509,7 @@ function Show-AboutDialog {
     $dlg.Text = 'About Putter'
     $dlg.Width = 520
     $dlg.Height = 300
-    $dlg.StartPosition = 'CenterParent'
+    $dlg.StartPosition = if ($FromTray) { 'CenterScreen' } else { 'CenterParent' }
     $dlg.FormBorderStyle = 'FixedDialog'
     $dlg.MaximizeBox = $false
     $dlg.MinimizeBox = $false

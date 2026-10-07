@@ -1078,8 +1078,8 @@ function Update-Status {
     $statusLabel.Text = "Sessions: $($table.Rows.Count)    Selected: $selectedCount"
 
     if ($null -ne $openButtonMain) {
-        $openButtonMain.Text = if ($selectedCount -gt 1) { 'Multi Open' } else { 'Open' }
-        $deleteButtonMain.Text = if ($selectedCount -gt 1) { 'Multi Delete' } else { 'Delete' }
+        $openButtonMain.Text = if ($selectedCount -gt 1) { 'Open Selected' } else { 'Open' }
+        $deleteButtonMain.Text = if ($selectedCount -gt 1) { 'Delete Selected' } else { 'Delete' }
 
         $openButtonMain.Enabled = ($selectedCount -gt 0)
         $renameButton.Enabled = ($selectedCount -eq 1)

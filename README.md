@@ -31,7 +31,7 @@ It reads PuTTY sessions directly from:
 - Automatic `.reg` backup before registry modifications
 - Preserve the grid position and selection when session data is reloaded where possible
 - Optional close-to-tray and minimize-to-tray behavior
-- Notification-area menu with a compact directly embedded scrollable session list, **About**, **Reopen**, and a real **Exit**
+- Notification-area menu with **About**, **Reopen**, and a real **Exit**
 
 ## Running
 
@@ -271,6 +271,5 @@ The per-user configuration is stored in Putter.config.json next to the script an
 - Replaced the filter text box with an editable history drop-down that stores up to 20 unique recent filters in `Putter.config.json`, using case-insensitive Unicode-aware matching while preserving the most recently entered form.
 - Added **Clear history** to the filter history drop-down.
 - Added configurable tray behavior: closing Putter goes to the notification area by default, while normal minimize-to-taskbar remains the default for the minimize button unless changed in **Options -> Settings...**.
-- Added a notification-area menu with a compact directly embedded scrollable session list, **About**, **Reopen**, and a real **Exit** command that always terminates Putter.
-- Tray sessions can be scrolled with the mouse wheel and launched directly with a single click; Enter launches the selected session and Esc closes the tray menu.
+- Added a notification-area menu with **About**, **Reopen**, and a real **Exit** command that always terminates Putter.
 - Added documentation for Windows Mark-of-the-Web warnings that may affect source files extracted from a ZIP downloaded from GitHub.

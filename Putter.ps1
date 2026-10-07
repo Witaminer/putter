@@ -105,6 +105,34 @@ public class PutterDataGridView : DataGridView
 
         if (!this.IsCurrentCellInEditMode &&
             outsideEditModifiers == Keys.None &&
+            (outsideEditKeyCode == Keys.Home || outsideEditKeyCode == Keys.End))
+        {
+            if (this.Rows.Count > 0)
+            {
+                int targetRowIndex =
+                    outsideEditKeyCode == Keys.Home ? 0 : this.Rows.Count - 1;
+                int targetColumnIndex =
+                    this.CurrentCell != null ? this.CurrentCell.ColumnIndex : 0;
+
+                if (targetColumnIndex < 0 ||
+                    targetColumnIndex >= this.Columns.Count ||
+                    !this.Columns[targetColumnIndex].Visible)
+                {
+                    targetColumnIndex = this.Columns.GetFirstColumn(
+                        DataGridViewElementStates.Visible
+                    ).Index;
+                }
+
+                this.ClearSelection();
+                this.CurrentCell = this.Rows[targetRowIndex].Cells[targetColumnIndex];
+                this.Rows[targetRowIndex].Selected = true;
+            }
+
+            return true;
+        }
+
+        if (!this.IsCurrentCellInEditMode &&
+            outsideEditModifiers == Keys.None &&
             outsideEditKeyCode == Keys.Enter)
         {
             if (SessionLaunchRequested != null)

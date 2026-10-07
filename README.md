@@ -8,7 +8,7 @@ It reads PuTTY sessions directly from:
 
 ## Current version
 
-**0.20**
+**0.21**
 
 ## Features
 
@@ -256,3 +256,8 @@ The per-user configuration is stored in Putter.config.json next to the script an
 - Grid columns can be reordered by dragging their headers, and the data-column order is now stored in `Putter.config.json`.
 - Refresh and other full session-list reloads now preserve the visible grid position and selection where possible instead of jumping to the top.
 - Replaced the single-item **Help -> About Putter...** menu with a direct **About** menu item.
+
+
+## Version 0.21
+
+- Fixed registry import behavior in the PS2EXE GUI build by suppressing `reg.exe import` error-stream output that could otherwise appear as misleading message boxes after a successful import.

@@ -2987,7 +2987,7 @@ $form.Add_FormClosing({
 })
 
 try {
-    [void]$form.ShowDialog()
+    [System.Windows.Forms.Application]::Run($form)
 }
 finally {
     if ($null -ne $trayIcon) {

@@ -129,7 +129,7 @@ Windows 7 and the older Windows Server versions above are compatibility targets 
 
 ## Safety
 
-Putter edits the current user's PuTTY session registry keys directly. Automatic full `.reg` backups are enabled by default before modifying operations; the backup location and automatic-backup behavior can be changed in **Options -> Settings...**.
+Putter edits the current user's PuTTY session registry keys directly. Automatic full `.reg` backups are enabled by default before modifying operations; the backup location and automatic-backup behavior can be changed in **Settings**.
 
 ## Security and privacy
 
@@ -163,7 +163,7 @@ While editing a cell, `Home` and `End` move the caret to the beginning or end of
 - **File -> Export all sessions...** uses Windows reg.exe export.
 - **File -> Export selected sessions...** exports only the selected PuTTY session keys into a Regedit-compatible .reg file.
 - **File -> Import .reg...** validates that every registry section is inside the PuTTY Sessions tree before importing.
-- **Options -> Settings...** controls automatic backups and the backup folder.
+- **Settings** controls automatic backups and the backup folder.
 - **Help -> About Putter...** shows the version, build date in YYYY.MM.DD format, GPL license, backup status, backup folder, and a clickable GitHub link.
 - **Export selected sessions...** is also available from the grid context menu.
 
@@ -186,7 +186,7 @@ The per-user configuration is stored in Putter.config.json next to the script an
 ## Version 0.11
 
 - Added optional **Night mode** with a light-on-dark palette for the main window and Putter dialogs.
-- Added a configurable **PuTTY launcher** in **Options -> Settings...**. The browse dialog prefers `.exe`, `.lnk`, `.bat`, and `.cmd`, while still allowing **All files (*.*)**.
+- Added a configurable **PuTTY launcher** in **Settings**. The browse dialog prefers `.exe`, `.lnk`, `.bat`, and `.cmd`, while still allowing **All files (*.*)**.
 - Added a configurable delay between launching multiple sessions.
 - Right-click the session grid and choose **Open session** or **Open selected sessions (N)**.
 - Press **Enter** outside inline editing to launch the selected session or sessions. Enter still commits an active cell edit.
@@ -195,7 +195,7 @@ The per-user configuration is stored in Putter.config.json next to the script an
 ## Version 0.12
 
 - Fixed Night mode menu rendering with a dedicated dark ToolStrip renderer.
-- Added configurable grid font size and a Normal/Bold choice in **Options -> Settings...**.
+- Added configurable grid font size and a Normal/Bold choice in **Settings**.
 - Disabled manual row-height resizing in the session grid.
 - Added a compact **>** button column to launch an individual session directly.
 
@@ -270,6 +270,6 @@ The per-user configuration is stored in Putter.config.json next to the script an
 - Added a **Clear** button next to the session filter.
 - Replaced the filter text box with an editable history drop-down that stores up to 20 unique recent filters in `Putter.config.json`, using case-insensitive Unicode-aware matching while preserving the most recently entered form.
 - Added **Clear history** to the filter history drop-down.
-- Added configurable tray behavior: closing Putter goes to the notification area by default, while normal minimize-to-taskbar remains the default for the minimize button unless changed in **Options -> Settings...**.
+- Added configurable tray behavior: closing Putter goes to the notification area by default, while normal minimize-to-taskbar remains the default for the minimize button unless changed in **Settings**.
 - Added a notification-area menu with **About**, **Reopen**, and a real **Exit** command that always terminates Putter.
 - Added documentation for Windows Mark-of-the-Web warnings that may affect source files extracted from a ZIP downloaded from GitHub.

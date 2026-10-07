@@ -245,6 +245,30 @@ $PutterVersion   = '0.21'
 $PutterBuildDate = '2026.10.07'
 $RepositoryUrl   = 'https://github.com/Witaminer/putter'
 
+# Keep one Putter instance per interactive Windows session.
+# A second launch signals the running instance to restore itself, then exits.
+$PutterMutexName = 'Local\Putter.SingleInstance'
+$PutterActivateEventName = 'Local\Putter.Activate'
+
+$putterCreatedNew = $false
+$PutterInstanceMutex = [System.Threading.Mutex]::new(
+    $true,
+    $PutterMutexName,
+    [ref]$putterCreatedNew
+)
+$PutterActivateEvent = [System.Threading.EventWaitHandle]::new(
+    $false,
+    [System.Threading.EventResetMode]::AutoReset,
+    $PutterActivateEventName
+)
+
+if (-not $putterCreatedNew) {
+    [void]$PutterActivateEvent.Set()
+    $PutterActivateEvent.Dispose()
+    $PutterInstanceMutex.Dispose()
+    return
+}
+
 # Embedded application icon. The ICO contains 16x16, 32x32, and 48x48 images.
 # Keeping it in the script makes Putter self-contained and ASCII-safe.
 $PutterIconBase64 = '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'
@@ -2031,7 +2055,7 @@ function Start-PutterSessionNames {
     $launcher = [string]$Config.PuttyLauncher
 
     if ([string]::IsNullOrWhiteSpace($launcher)) {
-        Show-PutterError 'No PuTTY launcher is configured. Open Options -> Settings and select a launcher.' 'Putter - Launcher not configured'
+        Show-PutterError 'No PuTTY launcher is configured. Open Settings and select a launcher.' 'Putter - Launcher not configured'
         return
     }
 
@@ -2255,7 +2279,7 @@ function Import-RegistryFile {
 
 function Show-OptionsDialog {
     $dlg = New-Object System.Windows.Forms.Form
-    $dlg.Text = 'Putter - Options'
+    $dlg.Text = 'Putter - Settings'
     $dlg.Width = 650
     $dlg.Height = 555
     $dlg.StartPosition = 'CenterParent'
@@ -2651,6 +2675,15 @@ $trayIcon.Add_DoubleClick({
     Show-PutterMainWindow
 })
 
+$instanceActivationTimer = New-Object System.Windows.Forms.Timer
+$instanceActivationTimer.Interval = 200
+$instanceActivationTimer.Add_Tick({
+    if ($PutterActivateEvent.WaitOne(0)) {
+        Show-PutterMainWindow
+    }
+})
+$instanceActivationTimer.Start()
+
 # ============================================================
 # Main menu
 # ============================================================
@@ -2694,15 +2727,11 @@ $exitItem.Add_Click({
 [void]$fileMenu.DropDownItems.Add($fileSeparator2)
 [void]$fileMenu.DropDownItems.Add($exitItem)
 
-$optionsMenu = New-Object System.Windows.Forms.ToolStripMenuItem
-$optionsMenu.Text = 'Options'
-
-$settingsItem = New-Object System.Windows.Forms.ToolStripMenuItem
-$settingsItem.Text = 'Settings...'
-$settingsItem.Add_Click({
+$settingsMenu = New-Object System.Windows.Forms.ToolStripMenuItem
+$settingsMenu.Text = 'Settings'
+$settingsMenu.Add_Click({
     Show-OptionsDialog
 })
-[void]$optionsMenu.DropDownItems.Add($settingsItem)
 
 $aboutMenu = New-Object System.Windows.Forms.ToolStripMenuItem
 $aboutMenu.Text = 'About'
@@ -2711,7 +2740,7 @@ $aboutMenu.Add_Click({
 })
 
 [void]$menuStrip.Items.Add($fileMenu)
-[void]$menuStrip.Items.Add($optionsMenu)
+[void]$menuStrip.Items.Add($settingsMenu)
 [void]$menuStrip.Items.Add($aboutMenu)
 
 $fileMenu.Add_DropDownOpening({
@@ -2917,6 +2946,11 @@ try {
     [System.Windows.Forms.Application]::Run($form)
 }
 finally {
+    if ($null -ne $instanceActivationTimer) {
+        $instanceActivationTimer.Stop()
+        $instanceActivationTimer.Dispose()
+    }
+
     if ($null -ne $trayIcon) {
         $trayIcon.Visible = $false
         $trayIcon.Dispose()
@@ -2924,5 +2958,19 @@ finally {
 
     if ($null -ne $trayMenu) {
         $trayMenu.Dispose()
+    }
+
+    if ($null -ne $PutterActivateEvent) {
+        $PutterActivateEvent.Dispose()
+    }
+
+    if ($null -ne $PutterInstanceMutex) {
+        try {
+            $PutterInstanceMutex.ReleaseMutex()
+        }
+        catch {
+        }
+
+        $PutterInstanceMutex.Dispose()
     }
 }

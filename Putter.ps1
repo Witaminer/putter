@@ -214,7 +214,7 @@ public class PutterDarkRenderer : ToolStripProfessionalRenderer
 '@ -ReferencedAssemblies $PutterCompilerReferences -WarningAction SilentlyContinue
 
 $PutterVersion   = '0.21'
-$PutterBuildDate = '2026.10.06'
+$PutterBuildDate = '2026.10.07'
 $RepositoryUrl   = 'https://github.com/Witaminer/putter'
 
 # Embedded application icon. The ICO contains 16x16, 32x32, and 48x48 images.
@@ -256,6 +256,46 @@ else {
 $ConfigPath       = Join-Path $PutterRoot 'Putter.config.json'
 $DefaultBackupDir = Join-Path $PutterRoot 'Backups'
 
+$FilterHistoryLimit         = 20
+$FilterHistorySeparatorText = '--------------------'
+$FilterHistoryClearText     = 'Clear history'
+
+function Normalize-PutterFilterHistory {
+    param([object[]]$Items)
+
+    $result = New-Object System.Collections.Generic.List[string]
+
+    foreach ($item in @($Items)) {
+        $text = [string]$item
+
+        if ([string]::IsNullOrWhiteSpace($text)) {
+            continue
+        }
+
+        $exists = $false
+
+        foreach ($existing in $result) {
+            if ([string]::Equals(
+                    $existing,
+                    $text,
+                    [System.StringComparison]::OrdinalIgnoreCase)) {
+                $exists = $true
+                break
+            }
+        }
+
+        if (-not $exists) {
+            $result.Add($text)
+
+            if ($result.Count -ge $FilterHistoryLimit) {
+                break
+            }
+        }
+    }
+
+    return @($result)
+}
+
 $Config = [PSCustomObject]@{
     CreateBackups          = $true
     BackupDirectory        = $DefaultBackupDir
@@ -271,6 +311,7 @@ $Config = [PSCustomObject]@{
     GridColumnFillWeights  = $null
     GridColumnOrder        = $null
     GridSort               = ''
+    FilterHistory          = @()
     PuttyLauncher          = ''
     LaunchDelayMilliseconds = 1000
 }
@@ -323,6 +364,10 @@ if (Test-Path -LiteralPath $ConfigPath) {
 
         if ($null -ne $loadedConfig.GridSort) {
             $Config.GridSort = [string]$loadedConfig.GridSort
+        }
+
+        if ($null -ne $loadedConfig.FilterHistory) {
+            $Config.FilterHistory = Normalize-PutterFilterHistory -Items @($loadedConfig.FilterHistory)
         }
 
         if ($null -ne $loadedConfig.PuttyLauncher) {
@@ -759,11 +804,87 @@ $filterLabel.AutoSize = $true
 $filterLabel.Left = 10
 $filterLabel.Top = 39
 
-$filterBox = New-Object System.Windows.Forms.TextBox
+$filterBox = New-Object System.Windows.Forms.ComboBox
 $filterBox.Left = 60
 $filterBox.Top = 34
-$filterBox.Width = 500
-$filterBox.ShortcutsEnabled = $true
+$filterBox.Width = 420
+$filterBox.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDown
+$filterBox.MaxDropDownItems = 22
+
+$clearFilterButton = New-Object System.Windows.Forms.Button
+$clearFilterButton.Text = 'Clear'
+$clearFilterButton.Left = 490
+$clearFilterButton.Top = 33
+$clearFilterButton.Width = 70
+$clearFilterButton.Height = 24
+$clearFilterButton.FlatStyle = [System.Windows.Forms.FlatStyle]::System
+
+$script:UpdatingFilterHistory = $false
+$script:FilterTextBeforeDropDown = ''
+
+function Refresh-PutterFilterHistoryItems {
+    $currentText = $filterBox.Text
+
+    $script:UpdatingFilterHistory = $true
+
+    try {
+        $filterBox.BeginUpdate()
+        $filterBox.Items.Clear()
+
+        foreach ($entry in @($Config.FilterHistory)) {
+            [void]$filterBox.Items.Add([string]$entry)
+        }
+
+        if (@($Config.FilterHistory).Count -gt 0) {
+            [void]$filterBox.Items.Add($FilterHistorySeparatorText)
+            [void]$filterBox.Items.Add($FilterHistoryClearText)
+        }
+
+        $filterBox.SelectedIndex = -1
+        $filterBox.Text = $currentText
+        $filterBox.SelectionStart = $filterBox.Text.Length
+    }
+    finally {
+        $filterBox.EndUpdate()
+        $script:UpdatingFilterHistory = $false
+    }
+}
+
+function Add-PutterFilterHistoryEntry {
+    param([string]$Text)
+
+    if ([string]::IsNullOrWhiteSpace($Text)) {
+        return
+    }
+
+    $newHistory = New-Object System.Collections.Generic.List[string]
+    $newHistory.Add($Text)
+
+    foreach ($existing in @($Config.FilterHistory)) {
+        if ([string]::Equals(
+                [string]$existing,
+                $Text,
+                [System.StringComparison]::OrdinalIgnoreCase)) {
+            continue
+        }
+
+        $newHistory.Add([string]$existing)
+
+        if ($newHistory.Count -ge $FilterHistoryLimit) {
+            break
+        }
+    }
+
+    $Config.FilterHistory = @($newHistory)
+    Save-PutterConfig
+    Refresh-PutterFilterHistoryItems
+}
+
+function Clear-PutterFilterHistory {
+    $Config.FilterHistory = @()
+    Save-PutterConfig
+    Refresh-PutterFilterHistoryItems
+}
 
 $grid = New-Object PutterDataGridView
 $grid.Left = 10
@@ -1073,7 +1194,18 @@ Load-PuttySessions
 # Filtering and selection
 # ============================================================
 
+Refresh-PutterFilterHistoryItems
+
 $filterBox.Add_TextChanged({
+    if ($script:UpdatingFilterHistory) {
+        return
+    }
+
+    if ($filterBox.Text -eq $FilterHistorySeparatorText -or
+        $filterBox.Text -eq $FilterHistoryClearText) {
+        return
+    }
+
     $text = $filterBox.Text.Replace("'", "''")
 
     if ([string]::IsNullOrWhiteSpace($text)) {
@@ -1087,6 +1219,72 @@ $filterBox.Add_TextChanged({
             "UserName LIKE '%$text%' OR " +
             "PublicKeyFile LIKE '%$text%'"
     }
+})
+
+$filterBox.Add_DropDown({
+    $script:FilterTextBeforeDropDown = $filterBox.Text
+    Refresh-PutterFilterHistoryItems
+})
+
+$filterBox.Add_SelectionChangeCommitted({
+    $selected = [string]$filterBox.SelectedItem
+
+    if ($selected -eq $FilterHistorySeparatorText) {
+        $script:UpdatingFilterHistory = $true
+
+        try {
+            $filterBox.SelectedIndex = -1
+            $filterBox.Text = $script:FilterTextBeforeDropDown
+            $filterBox.SelectionStart = $filterBox.Text.Length
+        }
+        finally {
+            $script:UpdatingFilterHistory = $false
+        }
+
+        return
+    }
+
+    if ($selected -eq $FilterHistoryClearText) {
+        $script:UpdatingFilterHistory = $true
+
+        try {
+            $filterBox.SelectedIndex = -1
+            $filterBox.Text = $script:FilterTextBeforeDropDown
+            $filterBox.SelectionStart = $filterBox.Text.Length
+        }
+        finally {
+            $script:UpdatingFilterHistory = $false
+        }
+
+        Clear-PutterFilterHistory
+        return
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($selected)) {
+        $filterBox.Text = $selected
+        $filterBox.SelectionStart = $filterBox.Text.Length
+        Add-PutterFilterHistoryEntry -Text $selected
+    }
+})
+
+$filterBox.Add_KeyDown({
+    param($sender, $e)
+
+    if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
+        Add-PutterFilterHistoryEntry -Text $filterBox.Text
+        $e.Handled = $true
+        $e.SuppressKeyPress = $true
+    }
+})
+
+$filterBox.Add_Leave({
+    Add-PutterFilterHistoryEntry -Text $filterBox.Text
+})
+
+$clearFilterButton.Add_Click({
+    Add-PutterFilterHistoryEntry -Text $filterBox.Text
+    $filterBox.Text = ''
+    $filterBox.Focus()
 })
 
 $grid.Add_CellContentClick({
@@ -2497,6 +2695,7 @@ $form.MainMenuStrip = $menuStrip
 $form.Controls.Add($menuStrip)
 $form.Controls.Add($filterLabel)
 $form.Controls.Add($filterBox)
+$form.Controls.Add($clearFilterButton)
 $form.Controls.Add($grid)
 $form.Controls.Add($refreshButton)
 $form.Controls.Add($openButtonMain)
@@ -2519,6 +2718,7 @@ $form.Add_Shown({
 })
 
 $form.Add_FormClosing({
+    Add-PutterFilterHistoryEntry -Text $filterBox.Text
     Save-PutterColumnWidths
     Save-PutterColumnOrder
     Save-PutterSort

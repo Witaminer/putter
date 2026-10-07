@@ -6,8 +6,8 @@ Only the latest released version of Putter is actively supported with security f
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.19    | :white_check_mark: |
-| < 0.19  | :x:                |
+| 0.21    | :white_check_mark: |
+| < 0.21  | :x:                |
 
 ## Reporting a Vulnerability
 

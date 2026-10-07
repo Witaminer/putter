@@ -2658,7 +2658,14 @@ $traySessionList.Add_DrawItem({
         $foreColor = [System.Drawing.SystemColors]::MenuText
     }
 
-    $e.Graphics.FillRectangle((New-Object System.Drawing.SolidBrush($backColor)), $e.Bounds)
+    $backBrush = New-Object System.Drawing.SolidBrush($backColor)
+
+    try {
+        $e.Graphics.FillRectangle($backBrush, $e.Bounds)
+    }
+    finally {
+        $backBrush.Dispose()
+    }
 
     $textRect = New-Object System.Drawing.Rectangle(
         $e.Bounds.X + 8,

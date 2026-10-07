@@ -342,6 +342,8 @@ $Config = [PSCustomObject]@{
     FilterHistory          = @()
     PuttyLauncher          = ''
     LaunchDelayMilliseconds = 1000
+    CloseToTray            = $true
+    MinimizeToTray         = $false
 }
 
 if (Test-Path -LiteralPath $ConfigPath) {
@@ -404,6 +406,14 @@ if (Test-Path -LiteralPath $ConfigPath) {
 
         if ($null -ne $loadedConfig.LaunchDelayMilliseconds) {
             $Config.LaunchDelayMilliseconds = [Math]::Max(0, [int]$loadedConfig.LaunchDelayMilliseconds)
+        }
+
+        if ($null -ne $loadedConfig.CloseToTray) {
+            $Config.CloseToTray = [bool]$loadedConfig.CloseToTray
+        }
+
+        if ($null -ne $loadedConfig.MinimizeToTray) {
+            $Config.MinimizeToTray = [bool]$loadedConfig.MinimizeToTray
         }
     }
     catch {
@@ -2004,12 +2014,14 @@ function Show-MultiEditDialog {
     [void]$dlg.ShowDialog($form)
 }
 
-function Start-PutterSessionRows {
-    param([System.Windows.Forms.DataGridViewRow[]]$Rows)
+function Start-PutterSessionNames {
+    param([string[]]$SessionNames)
 
-    $selectedRows = @($Rows | Sort-Object Index)
+    $names = @($SessionNames | Where-Object {
+        -not [string]::IsNullOrWhiteSpace([string]$_)
+    })
 
-    if ($selectedRows.Count -eq 0) {
+    if ($names.Count -eq 0) {
         return
     }
 
@@ -2028,8 +2040,7 @@ function Start-PutterSessionRows {
     $delay = [Math]::Max(0, [int]$Config.LaunchDelayMilliseconds)
     $launched = 0
 
-    foreach ($row in $selectedRows) {
-        $sessionName = [string]$row.Cells['Session'].Value
+    foreach ($sessionName in $names) {
         $quotedSessionName = '"' + $sessionName.Replace('"', '\"') + '"'
         $arguments = '-load ' + $quotedSessionName
 
@@ -2044,12 +2055,25 @@ function Start-PutterSessionRows {
             return
         }
 
-        if ($launched -lt $selectedRows.Count -and $delay -gt 0) {
+        if ($launched -lt $names.Count -and $delay -gt 0) {
             Start-Sleep -Milliseconds $delay
         }
     }
 
     $statusLabel.Text = "Started sessions: $launched"
+}
+
+function Start-PutterSessionRows {
+    param([System.Windows.Forms.DataGridViewRow[]]$Rows)
+
+    $selectedRows = @($Rows | Sort-Object Index)
+    $sessionNames = @(
+        $selectedRows | ForEach-Object {
+            [string]$_.Cells['Session'].Value
+        }
+    )
+
+    Start-PutterSessionNames -SessionNames $sessionNames
 }
 
 function Start-PutterSessions {
@@ -2230,7 +2254,7 @@ function Show-OptionsDialog {
     $dlg = New-Object System.Windows.Forms.Form
     $dlg.Text = 'Putter - Options'
     $dlg.Width = 650
-    $dlg.Height = 500
+    $dlg.Height = 555
     $dlg.StartPosition = 'CenterParent'
     $dlg.FormBorderStyle = 'FixedDialog'
     $dlg.MaximizeBox = $false
@@ -2338,16 +2362,30 @@ function Show-OptionsDialog {
     $delayBox.Maximum = [decimal]60
     $delayBox.Value = [decimal]([Math]::Min(60000, [Math]::Max(0, [int]$Config.LaunchDelayMilliseconds))) / 1000
 
+    $closeToTrayCheck = New-Object System.Windows.Forms.CheckBox
+    $closeToTrayCheck.Text = 'Close Putter to tray'
+    $closeToTrayCheck.Left = 15
+    $closeToTrayCheck.Top = 355
+    $closeToTrayCheck.Width = 300
+    $closeToTrayCheck.Checked = [bool]$Config.CloseToTray
+
+    $minimizeToTrayCheck = New-Object System.Windows.Forms.CheckBox
+    $minimizeToTrayCheck.Text = 'Minimize Putter to tray'
+    $minimizeToTrayCheck.Left = 15
+    $minimizeToTrayCheck.Top = 385
+    $minimizeToTrayCheck.Width = 300
+    $minimizeToTrayCheck.Checked = [bool]$Config.MinimizeToTray
+
     $okButton = New-Object System.Windows.Forms.Button
     $okButton.Text = 'OK'
     $okButton.Left = 430
-    $okButton.Top = 390
+    $okButton.Top = 445
     $okButton.Width = 85
 
     $cancelButton = New-Object System.Windows.Forms.Button
     $cancelButton.Text = 'Cancel'
     $cancelButton.Left = 525
-    $cancelButton.Top = 390
+    $cancelButton.Top = 445
     $cancelButton.Width = 90
 
     $backupCheck.Add_CheckedChanged({
@@ -2424,6 +2462,8 @@ function Show-OptionsDialog {
         $Config.GridFontBold = $fontBoldCheck.Checked
         $Config.PuttyLauncher = $launcherBox.Text.Trim()
         $Config.LaunchDelayMilliseconds = [int]([decimal]$delayBox.Value * 1000)
+        $Config.CloseToTray = $closeToTrayCheck.Checked
+        $Config.MinimizeToTray = $minimizeToTrayCheck.Checked
         Save-PutterConfig
         Apply-PutterMainTheme
 
@@ -2451,6 +2491,8 @@ function Show-OptionsDialog {
     $dlg.Controls.Add($launcherBrowseButton)
     $dlg.Controls.Add($delayLabel)
     $dlg.Controls.Add($delayBox)
+    $dlg.Controls.Add($closeToTrayCheck)
+    $dlg.Controls.Add($minimizeToTrayCheck)
     $dlg.Controls.Add($okButton)
     $dlg.Controls.Add($cancelButton)
     $dlg.AcceptButton = $okButton
@@ -2536,6 +2578,151 @@ function Show-AboutDialog {
     Apply-PutterTheme -Control $dlg
     [void]$dlg.ShowDialog($form)
 }
+
+# ============================================================
+# Tray
+# ============================================================
+
+$script:ExitRequested = $false
+
+function Show-PutterMainWindow {
+    $form.ShowInTaskbar = $true
+    $form.Show()
+
+    if ($form.WindowState -eq [System.Windows.Forms.FormWindowState]::Minimized) {
+        $form.WindowState = [System.Windows.Forms.FormWindowState]::Normal
+    }
+
+    $form.Activate()
+}
+
+function Hide-PutterToTray {
+    $form.ShowInTaskbar = $false
+    $form.Hide()
+}
+
+function Show-PutterTraySessions {
+    $dlg = New-Object System.Windows.Forms.Form
+    $dlg.Text = 'Putter - Sessions'
+    $dlg.Width = 420
+    $dlg.Height = 520
+    $dlg.StartPosition = 'CenterScreen'
+    $dlg.FormBorderStyle = 'SizableToolWindow'
+    $dlg.MinimizeBox = $false
+    $dlg.MaximizeBox = $false
+    $dlg.Icon = $form.Icon
+
+    $sessionList = New-Object System.Windows.Forms.ListBox
+    $sessionList.Left = 10
+    $sessionList.Top = 10
+    $sessionList.Width = 385
+    $sessionList.Height = 420
+    $sessionList.Anchor = 'Top,Bottom,Left,Right'
+    $sessionList.SelectionMode = [System.Windows.Forms.SelectionMode]::One
+    $sessionList.IntegralHeight = $false
+
+    foreach ($row in @($table.Select('', 'Session ASC'))) {
+        [void]$sessionList.Items.Add([string]$row.Session)
+    }
+
+    $openButton = New-Object System.Windows.Forms.Button
+    $openButton.Text = 'Open'
+    $openButton.Left = 215
+    $openButton.Top = 440
+    $openButton.Width = 85
+    $openButton.Height = 30
+    $openButton.Anchor = 'Bottom,Right'
+
+    $closeButton = New-Object System.Windows.Forms.Button
+    $closeButton.Text = 'Close'
+    $closeButton.Left = 310
+    $closeButton.Top = 440
+    $closeButton.Width = 85
+    $closeButton.Height = 30
+    $closeButton.Anchor = 'Bottom,Right'
+
+    $openSelectedSession = {
+        if ($sessionList.SelectedIndex -lt 0) {
+            return
+        }
+
+        Start-PutterSessionNames -SessionNames @([string]$sessionList.SelectedItem)
+    }
+
+    $openButton.Add_Click($openSelectedSession)
+    $sessionList.Add_DoubleClick($openSelectedSession)
+
+    $sessionList.Add_KeyDown({
+        param($sender, $e)
+
+        if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
+            & $openSelectedSession
+            $e.Handled = $true
+            $e.SuppressKeyPress = $true
+        }
+        elseif ($e.KeyCode -eq [System.Windows.Forms.Keys]::Escape) {
+            $dlg.Close()
+            $e.Handled = $true
+            $e.SuppressKeyPress = $true
+        }
+    })
+
+    $closeButton.Add_Click({
+        $dlg.Close()
+    })
+
+    $dlg.Controls.Add($sessionList)
+    $dlg.Controls.Add($openButton)
+    $dlg.Controls.Add($closeButton)
+    $dlg.AcceptButton = $openButton
+    $dlg.CancelButton = $closeButton
+
+    Apply-PutterTheme -Control $dlg
+
+    if ($sessionList.Items.Count -gt 0) {
+        $sessionList.SelectedIndex = 0
+    }
+
+    [void]$dlg.ShowDialog()
+}
+
+$trayMenu = New-Object System.Windows.Forms.ContextMenuStrip
+
+$trayShowItem = New-Object System.Windows.Forms.ToolStripMenuItem
+$trayShowItem.Text = 'Show Putter'
+$trayShowItem.Add_Click({
+    Show-PutterMainWindow
+})
+
+$traySessionsItem = New-Object System.Windows.Forms.ToolStripMenuItem
+$traySessionsItem.Text = 'Sessions...'
+$traySessionsItem.Add_Click({
+    Show-PutterTraySessions
+})
+
+$traySeparator = New-Object System.Windows.Forms.ToolStripSeparator
+
+$trayExitItem = New-Object System.Windows.Forms.ToolStripMenuItem
+$trayExitItem.Text = 'Exit'
+$trayExitItem.Add_Click({
+    $script:ExitRequested = $true
+    $form.Close()
+})
+
+[void]$trayMenu.Items.Add($trayShowItem)
+[void]$trayMenu.Items.Add($traySessionsItem)
+[void]$trayMenu.Items.Add($traySeparator)
+[void]$trayMenu.Items.Add($trayExitItem)
+
+$trayIcon = New-Object System.Windows.Forms.NotifyIcon
+$trayIcon.Icon = $form.Icon
+$trayIcon.Text = 'Putter'
+$trayIcon.ContextMenuStrip = $trayMenu
+$trayIcon.Visible = $true
+
+$trayIcon.Add_DoubleClick({
+    Show-PutterMainWindow
+})
 
 # ============================================================
 # Main menu
@@ -2769,13 +2956,44 @@ $form.Add_Shown({
     })
 })
 
+$form.Add_Resize({
+    if ($form.WindowState -eq [System.Windows.Forms.FormWindowState]::Minimized -and
+        $Config.MinimizeToTray) {
+        Hide-PutterToTray
+    }
+})
+
 $form.Add_FormClosing({
+    param($sender, $e)
+
+    if (-not $script:ExitRequested -and $Config.CloseToTray) {
+        $e.Cancel = $true
+        Hide-PutterToTray
+        return
+    }
+
     $filterHistoryTimer.Stop()
     Add-PutterFilterHistoryEntry -Text $filterBox.Text
     Save-PutterColumnWidths
     Save-PutterColumnOrder
     Save-PutterSort
     Save-PutterWindowGeometry -Form $form
+
+    $trayIcon.Visible = $false
+    $trayIcon.Dispose()
+    $trayMenu.Dispose()
 })
 
-[void]$form.ShowDialog()
+try {
+    [void]$form.ShowDialog()
+}
+finally {
+    if ($null -ne $trayIcon) {
+        $trayIcon.Visible = $false
+        $trayIcon.Dispose()
+    }
+
+    if ($null -ne $trayMenu) {
+        $trayMenu.Dispose()
+    }
+}

@@ -1241,6 +1241,7 @@ $filterBox.Add_TextChanged({
 })
 
 $filterBox.Add_DropDown({
+    $filterHistoryTimer.Stop()
     $script:FilterTextBeforeDropDown = $filterBox.Text
     Refresh-PutterFilterHistoryItems
 })
@@ -1282,6 +1283,7 @@ $filterBox.Add_SelectionChangeCommitted({
     if (-not [string]::IsNullOrWhiteSpace($selected)) {
         $filterBox.Text = $selected
         $filterBox.SelectionStart = $filterBox.Text.Length
+        $filterHistoryTimer.Stop()
         Add-PutterFilterHistoryEntry -Text $selected
     }
 })

@@ -2966,7 +2966,9 @@ $form.Add_Resize({
 $form.Add_FormClosing({
     param($sender, $e)
 
-    if (-not $script:ExitRequested -and $Config.CloseToTray) {
+    if (-not $script:ExitRequested -and
+        $Config.CloseToTray -and
+        $e.CloseReason -eq [System.Windows.Forms.CloseReason]::UserClosing) {
         $e.Cancel = $true
         Hide-PutterToTray
         return

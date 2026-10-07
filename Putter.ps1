@@ -2609,74 +2609,8 @@ function Hide-PutterToTray {
     $form.Hide()
 }
 
-function Refresh-PutterTraySessionList {
-    $traySessionList.BeginUpdate()
-
-    try {
-        $traySessionList.Items.Clear()
-
-        foreach ($row in @($table.Select('', 'Session ASC'))) {
-            [void]$traySessionList.Items.Add([string]$row.Session)
-        }
-    }
-    finally {
-        $traySessionList.EndUpdate()
-    }
-}
-
 $trayMenu = New-Object System.Windows.Forms.ContextMenuStrip
 $trayMenu.ShowImageMargin = $false
-
-$traySessionList = New-Object System.Windows.Forms.ListBox
-$traySessionList.Width = 300
-$traySessionList.Height = 260
-$traySessionList.IntegralHeight = $false
-$traySessionList.SelectionMode = [System.Windows.Forms.SelectionMode]::One
-$traySessionList.HorizontalScrollbar = $false
-
-$traySessionHost = New-Object System.Windows.Forms.ToolStripControlHost($traySessionList)
-$traySessionHost.AutoSize = $false
-$traySessionHost.Size = New-Object System.Drawing.Size(300, 260)
-$traySessionHost.Margin = New-Object System.Windows.Forms.Padding(2)
-
-$traySessionList.Add_MouseUp({
-    param($sender, $e)
-
-    if ($e.Button -ne [System.Windows.Forms.MouseButtons]::Left) {
-        return
-    }
-
-    $index = $traySessionList.IndexFromPoint($e.Location)
-
-    if ($index -lt 0) {
-        return
-    }
-
-    $traySessionList.SelectedIndex = $index
-    $sessionName = [string]$traySessionList.Items[$index]
-    $trayMenu.Close()
-    Start-PutterSessionNames -SessionNames @($sessionName)
-})
-
-$traySessionList.Add_KeyDown({
-    param($sender, $e)
-
-    if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Enter -and
-        $traySessionList.SelectedIndex -ge 0) {
-        $sessionName = [string]$traySessionList.SelectedItem
-        $trayMenu.Close()
-        Start-PutterSessionNames -SessionNames @($sessionName)
-        $e.Handled = $true
-        $e.SuppressKeyPress = $true
-    }
-    elseif ($e.KeyCode -eq [System.Windows.Forms.Keys]::Escape) {
-        $trayMenu.Close()
-        $e.Handled = $true
-        $e.SuppressKeyPress = $true
-    }
-})
-
-$traySeparatorBottom = New-Object System.Windows.Forms.ToolStripSeparator
 
 $trayAboutItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $trayAboutItem.Text = 'About'
@@ -2690,6 +2624,8 @@ $trayReopenItem.Add_Click({
     Show-PutterMainWindow
 })
 
+$traySeparator = New-Object System.Windows.Forms.ToolStripSeparator
+
 $trayExitItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $trayExitItem.Text = 'Exit'
 $trayExitItem.Add_Click({
@@ -2697,15 +2633,10 @@ $trayExitItem.Add_Click({
     $form.Close()
 })
 
-[void]$trayMenu.Items.Add($traySessionHost)
-[void]$trayMenu.Items.Add($traySeparatorBottom)
 [void]$trayMenu.Items.Add($trayAboutItem)
 [void]$trayMenu.Items.Add($trayReopenItem)
+[void]$trayMenu.Items.Add($traySeparator)
 [void]$trayMenu.Items.Add($trayExitItem)
-
-$trayMenu.Add_Opening({
-    Refresh-PutterTraySessionList
-})
 
 $trayIcon = New-Object System.Windows.Forms.NotifyIcon
 $trayIcon.Icon = $form.Icon

@@ -30,7 +30,26 @@ else {
 
 Add-Type -TypeDefinition @'
 using System;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
+
+public static class PutterNativeMethods
+{
+    public const int SW_RESTORE = 9;
+    public const int ASFW_ANY = -1;
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool AllowSetForegroundWindow(int dwProcessId);
+}
 
 public class PutterDataGridView : DataGridView
 {
@@ -263,6 +282,7 @@ $PutterActivateEvent = [System.Threading.EventWaitHandle]::new(
 )
 
 if (-not $putterCreatedNew) {
+    [void][PutterNativeMethods]::AllowSetForegroundWindow([PutterNativeMethods]::ASFW_ANY)
     [void]$PutterActivateEvent.Set()
     $PutterActivateEvent.Dispose()
     $PutterInstanceMutex.Dispose()
@@ -2625,9 +2645,14 @@ function Show-PutterMainWindow {
     $form.Show()
 
     if ($form.WindowState -eq [System.Windows.Forms.FormWindowState]::Minimized) {
-        $form.WindowState = [System.Windows.Forms.FormWindowState]::Normal
+        [void][PutterNativeMethods]::ShowWindow(
+            $form.Handle,
+            [PutterNativeMethods]::SW_RESTORE
+        )
     }
 
+    $form.BringToFront()
+    [void][PutterNativeMethods]::SetForegroundWindow($form.Handle)
     $form.Activate()
 }
 

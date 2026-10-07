@@ -257,7 +257,7 @@ The per-user configuration is stored in Putter.config.json next to the script an
 - Added **Title** to multi-edit and to the session filter.
 - Grid columns can be reordered by dragging their headers, and the data-column order is now stored in `Putter.config.json`.
 - Refresh and other full session-list reloads now preserve the visible grid position and selection where possible instead of jumping to the top.
-- Replaced the single-item **Help -> About Putter...** menu with a direct **About** menu item.
+- Replaced the old nested About command with a direct **About** menu item.
 
 
 ## Version 0.21

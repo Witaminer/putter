@@ -13,7 +13,7 @@ It reads PuTTY sessions directly from:
 ## Features
 
 - Browse saved PuTTY sessions in a sortable table
-- Filter sessions by name, window title, host, login, or key file
+- Filter sessions by name, window title, host, login, or key file, with a persistent 20-entry filter history and a one-click **Clear** button
 - Edit PuTTY window titles (`WinTitle`) directly in the grid
 - Drag data columns into a preferred order; the order is remembered in `Putter.config.json`
 - Multi-select rows with Ctrl/Shift
@@ -94,7 +94,7 @@ The EXE is provided for convenience, not to hide or replace the source. PS2EXE e
 
 The ready-to-run `Putter.exe` release is built directly from the same `Putter.ps1` source using **ps2exe 1.0.18**.
 
-For convenience, the repository includes `Build.bat` and `Build.ps1` so the executable can be rebuilt locally without typing the full ps2exe command manually. `Build.bat` prefers PowerShell 7.x when `pwsh.exe` is available and falls back to Windows PowerShell 5.1. `Build.ps1` checks for `Putter.ps1`, uses an available ps2exe installation if one is present, offers to install the latest ps2exe from PowerShell Gallery when it is missing, asks before replacing an existing `Putter.exe`, temporarily disables console QuickEdit so accidental mouse selections cannot pause the build, restores the previous console mode afterwards, and prints the resulting SHA-256 hash after a successful build.
+For convenience, the repository includes `Build.bat` and `Build.ps1` so the executable can be rebuilt locally without typing the full ps2exe command manually. `Build.bat` prefers PowerShell 7.x when `pwsh.exe` is available and falls back to Windows PowerShell 5.1. `Build.ps1` checks for `Putter.ps1`, uses an available ps2exe installation if one is present, offers to install the latest ps2exe from PowerShell Gallery when it is missing, asks before replacing an existing `Putter.exe`, disables console QuickEdit for the builder console so accidental mouse selections cannot pause the build, and prints the resulting SHA-256 hash after a successful build.
 
 To build using the helper:
 
@@ -264,5 +264,8 @@ The per-user configuration is stored in Putter.config.json next to the script an
 - Added `Build.bat` and `Build.ps1` helpers for local executable builds.
 - `Build.bat` prefers PowerShell 7.x when available and falls back to Windows PowerShell 5.1.
 - `Build.ps1` checks for `Putter.ps1`, uses an installed ps2exe version when available, offers to install the latest ps2exe from PowerShell Gallery when missing, asks before replacing an existing executable, and reports the resulting SHA-256 hash.
-- `Build.ps1` now temporarily disables console QuickEdit during the build and restores the previous console mode afterwards, preventing accidental mouse selections from pausing the build process.
+- `Build.ps1` disables console QuickEdit for the builder console, preventing accidental mouse selections from pausing the build process.
+- Added a **Clear** button next to the session filter.
+- Replaced the filter text box with an editable history drop-down that stores up to 20 unique recent filters in `Putter.config.json`, using case-insensitive Unicode-aware matching while preserving the most recently entered form.
+- Added **Clear history** to the filter history drop-down.
 - Added documentation for Windows Mark-of-the-Web warnings that may affect source files extracted from a ZIP downloaded from GitHub.

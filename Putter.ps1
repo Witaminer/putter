@@ -213,7 +213,7 @@ public class PutterDarkRenderer : ToolStripProfessionalRenderer
 }
 '@ -ReferencedAssemblies $PutterCompilerReferences -WarningAction SilentlyContinue
 
-$PutterVersion   = '0.20'
+$PutterVersion   = '0.21'
 $PutterBuildDate = '2026.10.06'
 $RepositoryUrl   = 'https://github.com/Witaminer/putter'
 
@@ -1962,7 +1962,7 @@ function Import-RegistryFile {
 
         $backupFile = Backup-PuttySessions
 
-        & reg.exe import $dialog.FileName | Out-Null
+        & reg.exe import $dialog.FileName 2>&1 | Out-Null
 
         if ($LASTEXITCODE -ne 0) {
             throw 'reg.exe failed to import the selected file.'

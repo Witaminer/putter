@@ -2626,71 +2626,26 @@ function Refresh-PutterTraySessionList {
 
 $trayMenu = New-Object System.Windows.Forms.ContextMenuStrip
 $trayMenu.ShowImageMargin = $false
-$trayMenu.Padding = New-Object System.Windows.Forms.Padding(1)
+
+$trayAboutItem = New-Object System.Windows.Forms.ToolStripMenuItem
+$trayAboutItem.Text = 'About'
+$trayAboutItem.Add_Click({
+    Show-AboutDialog -FromTray
+})
+
+$traySeparatorTop = New-Object System.Windows.Forms.ToolStripSeparator
 
 $traySessionList = New-Object System.Windows.Forms.ListBox
-$traySessionList.Width = 320
-$traySessionList.Height = 300
+$traySessionList.Width = 360
+$traySessionList.Height = 360
 $traySessionList.IntegralHeight = $false
 $traySessionList.SelectionMode = [System.Windows.Forms.SelectionMode]::One
-$traySessionList.HorizontalScrollbar = $false
-$traySessionList.BorderStyle = [System.Windows.Forms.BorderStyle]::None
-$traySessionList.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawFixed
-$traySessionList.ItemHeight = 20
-$traySessionList.BackColor = [System.Drawing.SystemColors]::Menu
-$traySessionList.ForeColor = [System.Drawing.SystemColors]::MenuText
-
-$traySessionList.Add_DrawItem({
-    param($sender, $e)
-
-    if ($e.Index -lt 0) {
-        return
-    }
-
-    $selected = (($e.State -band [System.Windows.Forms.DrawItemState]::Selected) -ne 0)
-
-    if ($selected) {
-        $backColor = [System.Drawing.SystemColors]::Highlight
-        $foreColor = [System.Drawing.SystemColors]::HighlightText
-    }
-    else {
-        $backColor = [System.Drawing.SystemColors]::Menu
-        $foreColor = [System.Drawing.SystemColors]::MenuText
-    }
-
-    $backBrush = New-Object System.Drawing.SolidBrush($backColor)
-
-    try {
-        $e.Graphics.FillRectangle($backBrush, $e.Bounds)
-    }
-    finally {
-        $backBrush.Dispose()
-    }
-
-    $textRect = New-Object System.Drawing.Rectangle(
-        $e.Bounds.X + 8,
-        $e.Bounds.Y,
-        [Math]::Max(0, $e.Bounds.Width - 12),
-        $e.Bounds.Height
-    )
-
-    [System.Windows.Forms.TextRenderer]::DrawText(
-        $e.Graphics,
-        [string]$traySessionList.Items[$e.Index],
-        $traySessionList.Font,
-        $textRect,
-        $foreColor,
-        [System.Windows.Forms.TextFormatFlags]::VerticalCenter -bor
-        [System.Windows.Forms.TextFormatFlags]::EndEllipsis -bor
-        [System.Windows.Forms.TextFormatFlags]::NoPrefix
-    )
-})
+$traySessionList.HorizontalScrollbar = $true
 
 $traySessionHost = New-Object System.Windows.Forms.ToolStripControlHost($traySessionList)
 $traySessionHost.AutoSize = $false
-$traySessionHost.Size = New-Object System.Drawing.Size(320, 300)
-$traySessionHost.Margin = New-Object System.Windows.Forms.Padding(0)
-$traySessionHost.Padding = New-Object System.Windows.Forms.Padding(0)
+$traySessionHost.Size = New-Object System.Drawing.Size(360, 360)
+$traySessionHost.Margin = New-Object System.Windows.Forms.Padding(2)
 
 $traySessionList.Add_MouseUp({
     param($sender, $e)
@@ -2731,15 +2686,9 @@ $traySessionList.Add_KeyDown({
 
 $traySeparatorBottom = New-Object System.Windows.Forms.ToolStripSeparator
 
-$trayAboutItem = New-Object System.Windows.Forms.ToolStripMenuItem
-$trayAboutItem.Text = 'About'
-$trayAboutItem.Add_Click({
-    Show-AboutDialog -FromTray
-})
-
-$trayRestoreItem = New-Object System.Windows.Forms.ToolStripMenuItem
-$trayRestoreItem.Text = 'Restore Putter'
-$trayRestoreItem.Add_Click({
+$trayShowItem = New-Object System.Windows.Forms.ToolStripMenuItem
+$trayShowItem.Text = 'Show Putter'
+$trayShowItem.Add_Click({
     Show-PutterMainWindow
 })
 
@@ -2750,10 +2699,11 @@ $trayExitItem.Add_Click({
     $form.Close()
 })
 
+[void]$trayMenu.Items.Add($trayAboutItem)
+[void]$trayMenu.Items.Add($traySeparatorTop)
 [void]$trayMenu.Items.Add($traySessionHost)
 [void]$trayMenu.Items.Add($traySeparatorBottom)
-[void]$trayMenu.Items.Add($trayAboutItem)
-[void]$trayMenu.Items.Add($trayRestoreItem)
+[void]$trayMenu.Items.Add($trayShowItem)
 [void]$trayMenu.Items.Add($trayExitItem)
 
 $trayMenu.Add_Opening({

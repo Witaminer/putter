@@ -8,13 +8,13 @@ It reads PuTTY sessions directly from:
 
 ## Current version
 
-**0.21**
+**0.22**
 
 ## Features
 
 - Browse saved PuTTY sessions in a sortable table
-- Filter sessions by name, window title, host, login, or key file, with a persistent 20-entry filter history and a one-click **Clear** button
-- Edit PuTTY window titles (`WinTitle`) directly in the grid
+- Filter sessions by name, window title, host, login, scrollback, or key file, with a persistent 20-entry filter history and a one-click **Clear** button
+- Edit PuTTY window titles (`WinTitle`) and scrollback line counts (`ScrollbackLines`) directly in the grid
 - Drag data columns into a preferred order; the order is remembered in `Putter.config.json`
 - Multi-select rows with Ctrl/Shift
 - Double-click a cell to edit it
@@ -273,3 +273,9 @@ The per-user configuration is stored in Putter.config.json next to the script an
 - Added configurable tray behavior: closing Putter goes to the notification area by default, while normal minimize-to-taskbar remains the default for the minimize button unless changed in **Settings**.
 - Added a notification-area menu with **About**, **Reopen**, and a real **Exit** command that always terminates Putter.
 - Added documentation for Windows Mark-of-the-Web warnings that may affect source files extracted from a ZIP downloaded from GitHub.
+
+## Version 0.22
+
+- Added PuTTY scrollback line count (`ScrollbackLines`) to the session grid as **Scrollback**.
+- Added **Scrollback** to inline editing, multi-edit, filtering, and remembered grid column order and width settings.
+- Scrollback values are validated as non-negative integers before being written to the PuTTY session registry.

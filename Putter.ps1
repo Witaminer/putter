@@ -23,7 +23,7 @@ else {
 }
 
 # ============================================================
-# Putter 0.20
+# Putter 0.22
 # A lightweight multi-session editor for PuTTY on Windows.
 # Find it on https://github.com/Witaminer/putter
 # ============================================================
@@ -260,8 +260,8 @@ public class PutterDarkRenderer : ToolStripProfessionalRenderer
 }
 '@ -ReferencedAssemblies $PutterCompilerReferences -WarningAction SilentlyContinue
 
-$PutterVersion   = '0.21'
-$PutterBuildDate = '2026.10.07'
+$PutterVersion   = '0.22'
+$PutterBuildDate = '2026.10.26'
 $RepositoryUrl   = 'https://github.com/Witaminer/putter'
 
 # Keep one Putter instance per interactive Windows session.

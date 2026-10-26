@@ -736,7 +736,7 @@ function Restore-PutterColumnWidths {
         # Temporarily disable Fill mode, apply all saved weights, then enable it again.
         $grid.AutoSizeColumnsMode = [System.Windows.Forms.DataGridViewAutoSizeColumnsMode]::None
 
-        foreach ($columnName in @('Session', 'WinTitle', 'HostName', 'PortNumber', 'UserName', 'PublicKeyFile')) {
+        foreach ($columnName in @('Session', 'WinTitle', 'HostName', 'PortNumber', 'UserName', 'ScrollbackLines', 'PublicKeyFile')) {
             if (-not $grid.Columns.Contains($columnName)) {
                 continue
             }
@@ -763,7 +763,7 @@ function Restore-PutterColumnWidths {
 function Save-PutterColumnWidths {
     $weights = [ordered]@{}
 
-    foreach ($columnName in @('Session', 'WinTitle', 'HostName', 'PortNumber', 'UserName', 'PublicKeyFile')) {
+    foreach ($columnName in @('Session', 'WinTitle', 'HostName', 'PortNumber', 'UserName', 'ScrollbackLines', 'PublicKeyFile')) {
         if ($grid.Columns.Contains($columnName)) {
             $weights[$columnName] = [Math]::Round(
                 [double]$grid.Columns[$columnName].FillWeight,
@@ -777,7 +777,7 @@ function Save-PutterColumnWidths {
 }
 
 function Restore-PutterColumnOrder {
-    $columnNames = @('Session', 'WinTitle', 'HostName', 'PortNumber', 'UserName', 'PublicKeyFile')
+    $columnNames = @('Session', 'WinTitle', 'HostName', 'PortNumber', 'UserName', 'ScrollbackLines', 'PublicKeyFile')
     $savedOrder = @(
         $Config.GridColumnOrder |
             Where-Object { $_ -in $columnNames }
@@ -813,7 +813,7 @@ function Restore-PutterColumnOrder {
 }
 
 function Save-PutterColumnOrder {
-    $columnNames = @('Session', 'WinTitle', 'HostName', 'PortNumber', 'UserName', 'PublicKeyFile')
+    $columnNames = @('Session', 'WinTitle', 'HostName', 'PortNumber', 'UserName', 'ScrollbackLines', 'PublicKeyFile')
 
     $Config.GridColumnOrder = @(
         $grid.Columns |
@@ -1056,6 +1056,12 @@ $portColumn.DataType = [int]
 [void]$table.Columns.Add($portColumn)
 
 [void]$table.Columns.Add('UserName')
+
+$scrollbackColumn = New-Object System.Data.DataColumn
+$scrollbackColumn.ColumnName = 'ScrollbackLines'
+$scrollbackColumn.DataType = [int]
+[void]$table.Columns.Add($scrollbackColumn)
+
 [void]$table.Columns.Add('PublicKeyFile')
 [void]$table.Columns.Add('RegistryName')
 
@@ -1249,6 +1255,14 @@ function Load-PuttySessions {
         }
 
         $row.UserName = [string]$p.UserName
+
+        if ($null -ne $p.ScrollbackLines) {
+            $row.ScrollbackLines = [int]$p.ScrollbackLines
+        }
+        else {
+            $row.ScrollbackLines = 2000
+        }
+
         $row.PublicKeyFile = [string]$p.PublicKeyFile
 
         $table.Rows.Add($row)
@@ -1268,8 +1282,9 @@ $grid.Add_DataBindingComplete({
         WinTitle      = 'Title'
         HostName      = 'Host'
         PortNumber    = 'Port'
-        UserName      = 'Login'
-        PublicKeyFile = 'PublicKeyFile'
+        UserName        = 'Login'
+        ScrollbackLines = 'Scrollback'
+        PublicKeyFile   = 'PublicKeyFile'
     }
 
     foreach ($columnName in $headers.Keys) {
@@ -1315,6 +1330,7 @@ $filterBox.Add_TextChanged({
             "WinTitle LIKE '%$text%' OR " +
             "HostName LIKE '%$text%' OR " +
             "UserName LIKE '%$text%' OR " +
+            "Convert(ScrollbackLines, 'System.String') LIKE '%$text%' OR " +
             "PublicKeyFile LIKE '%$text%'"
     }
 
@@ -1520,6 +1536,19 @@ $grid.Add_CellEndEdit({
 
             Set-ItemProperty -LiteralPath $registryPath -Name 'PortNumber' -Value $port -ErrorAction Stop
         }
+        elseif ($columnName -eq 'ScrollbackLines') {
+            $scrollback = 0
+
+            if (-not [int]::TryParse([string]$newValue, [ref]$scrollback)) {
+                throw 'ScrollbackLines must be a number.'
+            }
+
+            if ($scrollback -lt 0) {
+                throw 'ScrollbackLines must be zero or greater.'
+            }
+
+            Set-ItemProperty -LiteralPath $registryPath -Name 'ScrollbackLines' -Value $scrollback -ErrorAction Stop
+        }
         elseif ($columnName -in @('WinTitle', 'HostName', 'UserName', 'PublicKeyFile')) {
             Set-ItemProperty -LiteralPath $registryPath -Name $columnName -Value ([string]$newValue) -ErrorAction Stop
         }
@@ -1720,7 +1749,7 @@ function Show-MultiEditDialog {
     $dlg = New-Object System.Windows.Forms.Form
     $dlg.Text = "Putter - Multi-edit ($($selectedRows.Count) sessions)"
     $dlg.Width = 680
-    $dlg.Height = 475
+    $dlg.Height = 510
     $dlg.StartPosition = 'CenterParent'
     $dlg.FormBorderStyle = 'FixedDialog'
     $dlg.MaximizeBox = $false
@@ -1777,23 +1806,24 @@ function Show-MultiEditDialog {
     $hostEdit = Add-EditLine 'Host' 100
     $portEdit = Add-EditLine 'Port' 135
     $userEdit = Add-EditLine 'Login' 170
-    $keyEdit = Add-EditLine 'PublicKeyFile' 205
+    $scrollbackEdit = Add-EditLine 'Scrollback' 205
+    $keyEdit = Add-EditLine 'PublicKeyFile' 240
 
     $sessionCheck = New-Object System.Windows.Forms.CheckBox
     $sessionCheck.Text = 'Session name'
     $sessionCheck.Left = 15
-    $sessionCheck.Top = 250
+    $sessionCheck.Top = 285
     $sessionCheck.Width = 130
 
     $findLabel = New-Object System.Windows.Forms.Label
     $findLabel.Text = 'Find:'
     $findLabel.Left = 155
-    $findLabel.Top = 251
+    $findLabel.Top = 286
     $findLabel.AutoSize = $true
 
     $findBox = New-Object System.Windows.Forms.TextBox
     $findBox.Left = 200
-    $findBox.Top = 247
+    $findBox.Top = 282
     $findBox.Width = 180
     $findBox.Enabled = $false
     $findBox.ShortcutsEnabled = $true
@@ -1801,12 +1831,12 @@ function Show-MultiEditDialog {
     $replaceLabel = New-Object System.Windows.Forms.Label
     $replaceLabel.Text = 'Replace:'
     $replaceLabel.Left = 390
-    $replaceLabel.Top = 251
+    $replaceLabel.Top = 286
     $replaceLabel.AutoSize = $true
 
     $replaceBox = New-Object System.Windows.Forms.TextBox
     $replaceBox.Left = 455
-    $replaceBox.Top = 247
+    $replaceBox.Top = 282
     $replaceBox.Width = 175
     $replaceBox.Enabled = $false
     $replaceBox.ShortcutsEnabled = $true
@@ -1834,7 +1864,7 @@ function Show-MultiEditDialog {
 
     $hint = New-Object System.Windows.Forms.Label
     $hint.Left = 155
-    $hint.Top = 280
+    $hint.Top = 315
     $hint.Width = 475
     $hint.Height = 35
     $hint.Text = 'Session name uses Find/Replace so each session keeps a unique name.'
@@ -1843,13 +1873,13 @@ function Show-MultiEditDialog {
     $applyButton = New-Object System.Windows.Forms.Button
     $applyButton.Text = 'Apply'
     $applyButton.Left = 450
-    $applyButton.Top = 360
+    $applyButton.Top = 395
     $applyButton.Width = 85
 
     $cancelButton = New-Object System.Windows.Forms.Button
     $cancelButton.Text = 'Cancel'
     $cancelButton.Left = 545
-    $cancelButton.Top = 360
+    $cancelButton.Top = 395
     $cancelButton.Width = 85
 
     $cancelButton.Add_Click({
@@ -1862,6 +1892,7 @@ function Show-MultiEditDialog {
             $hostEdit.Check.Checked -or
             $portEdit.Check.Checked -or
             $userEdit.Check.Checked -or
+            $scrollbackEdit.Check.Checked -or
             $keyEdit.Check.Checked -or
             $sessionCheck.Checked
 
@@ -1891,6 +1922,24 @@ function Show-MultiEditDialog {
             }
 
             $port = $parsedPort
+        }
+
+        $scrollback = $null
+
+        if ($scrollbackEdit.Check.Checked) {
+            $parsedScrollback = 0
+
+            if (-not [int]::TryParse($scrollbackEdit.Text.Text, [ref]$parsedScrollback)) {
+                Show-PutterError 'Scrollback must be a number.'
+                return
+            }
+
+            if ($parsedScrollback -lt 0) {
+                Show-PutterError 'Scrollback must be zero or greater.'
+                return
+            }
+
+            $scrollback = $parsedScrollback
         }
 
         if ($sessionCheck.Checked -and [string]::IsNullOrEmpty($findBox.Text)) {
@@ -1960,6 +2009,10 @@ function Show-MultiEditDialog {
             $changes += "Login = $($userEdit.Text.Text)"
         }
 
+        if ($scrollbackEdit.Check.Checked) {
+            $changes += "Scrollback = $scrollback"
+        }
+
         if ($keyEdit.Check.Checked) {
             $changes += "PublicKeyFile = $($keyEdit.Text.Text)"
         }
@@ -2005,6 +2058,10 @@ function Show-MultiEditDialog {
 
                 if ($userEdit.Check.Checked) {
                     Set-ItemProperty -LiteralPath $registryPath -Name 'UserName' -Value $userEdit.Text.Text -ErrorAction Stop
+                }
+
+                if ($scrollbackEdit.Check.Checked) {
+                    Set-ItemProperty -LiteralPath $registryPath -Name 'ScrollbackLines' -Value $scrollback -ErrorAction Stop
                 }
 
                 if ($keyEdit.Check.Checked) {
